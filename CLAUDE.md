@@ -26,6 +26,8 @@ There are no tests yet (pytest arrives in Step 6). Once it does: `uv run pytest`
 
 - `pyproject.toml` maps the `paper2md` command to `paper2md.cli:main` (src layout, `uv_build` backend).
 - `src/paper2md/cli.py` only parses and validates arguments. Conversion logic belongs in separate modules that `cli.py` calls.
+- `convert.py` runs Docling (OCR off by default: identical output on arXiv PDFs at half the time). `figures.py` then post-processes Docling's pictures, because Docling alone splits multi-panel figures, mislinks or drops captions, and crops off axis labels. It groups pictures by their nearest "Figure N" caption (below or beside), extends each crop down to its caption, absorbs short touching text (axis labels) into the figure and removes it from the body, re-parents the caption under the figure (otherwise the Markdown prints it twice), and names files by figure number.
+- Figure images are cropped from our own pypdfium2 render, not Docling's page images: Docling's default `docling-parse` backend renders some vector charts mostly blank (Scaling Laws, Figure 2). Don't switch Docling's backend to pypdfium2 to fix this: its text extraction adds spaces before punctuation (`[1 ,`).
 - Output layout per paper: `<out>/<pdf stem>/paper.md`, plus `figures/figure-NN.png` and `tables/table-NN.csv`.
 - `samples/` (test PDFs downloaded from arXiv) and `output/` are gitignored.
 
@@ -36,7 +38,7 @@ Commit once at the end of each step.
 - [x] Step 0: scaffold (uv package, git)
 - [x] Step 1: argparse CLI with input validation
 - [x] Step 2: `convert.py`: Docling `DocumentConverter` → `export_to_markdown()` → `paper.md`
-- [ ] Step 3: `figures.py`: `generate_picture_images=True`, `images_scale≈2`; save `doc.pictures` with `caption_text(doc)`; Markdown via `ImageRefMode.REFERENCED`
+- [x] Step 3: `figures.py`: figures saved as `figure-NN.png` (by figure number) at 216 dpi and linked with their captions; 40/40 correct across the samples
 - [ ] Step 4: `tables.py`: `doc.tables` → `export_to_dataframe()` → CSV
 - [ ] Step 5: `--formulas` flag → `do_formula_enrichment=True` (slow; LaTeX equations)
 - [ ] Step 6: pytest tests on a small sample PDF

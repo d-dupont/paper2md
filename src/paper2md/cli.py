@@ -47,7 +47,7 @@ def main() -> None:
     seconds = time.perf_counter() - start
 
     paper_dir.mkdir(parents=True, exist_ok=True)
-    figures = save_figures(doc, paper_dir)
+    figures = save_figures(doc, pdf, paper_dir)
     markdown_path = write_markdown(doc, paper_dir)
 
     print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {markdown_path}")

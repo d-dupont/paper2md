@@ -14,11 +14,6 @@ def convert_pdf(pdf: Path, ocr: bool = False) -> DoclingDocument:
     options = PdfPipelineOptions(
         # arXiv PDFs contain real text, so OCR (reading text from page images) is off by default.
         do_ocr=ocr,
-        # Crop each detected figure from a rendered page. Because this renders the page,
-        # vector charts (drawn with lines, not stored as pictures) are captured too.
-        generate_picture_images=True,
-        # Render at 2x (144 dpi) so small text in figures stays legible.
-        images_scale=2.0,
     )
     converter = DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}

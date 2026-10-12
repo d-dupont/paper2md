@@ -1582,10 +1582,14 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "docling" },
+    { name = "pypdfium2" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "docling", specifier = ">=2.137.0" }]
+requires-dist = [
+    { name = "docling", specifier = ">=2.137.0" },
+    { name = "pypdfium2", specifier = ">=5.14.0" },
+]
 
 [[package]]
 name = "pillow"
