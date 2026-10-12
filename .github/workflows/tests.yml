@@ -1,0 +1,25 @@
+# Runs the fast unit tests on every push and pull request, on Linux and Windows.
+# The slow end-to-end tests (real papers, ~1 GB of models) stay local: uv run pytest
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: # adds a "Run workflow" button on the Actions tab
+
+jobs:
+  unit-tests:
+    strategy:
+      fail-fast: false # if one system fails, still finish the other
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true # reuse downloaded packages between runs
+      - name: Install Python and the locked dependencies
+        run: uv sync --locked
+      - name: Run unit tests
+        run: uv run pytest -m "not slow"
