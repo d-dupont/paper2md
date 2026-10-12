@@ -29,6 +29,8 @@ There are no tests yet (pytest arrives in Step 6). Once it does: `uv run pytest`
 - `src/paper2md/cli.py` only parses and validates arguments. Conversion logic belongs in separate modules that `cli.py` calls.
 - `convert.py` runs Docling (OCR off by default: identical output on arXiv PDFs at half the time). `figures.py` then post-processes Docling's pictures, because Docling alone splits multi-panel figures, mislinks or drops captions, and crops off axis labels. It groups pictures by their nearest "Figure N" caption (below or beside), extends each crop down to its caption, absorbs short touching text (axis labels) into the figure and removes it from the body, re-parents the caption under the figure (otherwise the Markdown prints it twice), and names files by figure number.
 - `tables.py` drops `document_index` tables (tables of contents, lists of figures: redundant with headings and captions), skips CSV export for an uncaptioned table before the abstract (the authors' title block), links tables lacking a "Table N" caption to the nearest unclaimed one above or below, and writes `table-NN.csv` / `untitled-table-NN.csv`. It runs after `figures.py`, which may detach a figure caption Docling had wrongly attached to a table.
+- `superscripts.py` restores the sub/superscripts Docling flattens (`10-9` → `10^{-9}`, `β1` → `β_{1}`): it reads each character's baseline and font size with pdfium, marks runs smaller and raised/lowered than a nearby same-line character, and finds each run in Docling's text (or table cell) by its surrounding characters, longest unique context first; ambiguous runs are skipped. Order in `cli.py` matters: figures → superscripts → tables. `figures.py` cuts text by character position, which inserted `^{...}` would shift, and the CSV files must be written after the marks. Known gap: stacked inline math (fractions, ∑ limits) comes out garbled.
+- `write_markdown` passes `escape_underscores=False` so `x_{1}` isn't written as `x\_{1}`.
 - `layout.py` holds what both share: `Box` (page rectangles in points, top-left origin), `box_of`, and `attach_caption`.
 - Figure images are cropped from our own pypdfium2 render, not Docling's page images: Docling's default `docling-parse` backend renders some vector charts mostly blank (Scaling Laws, Figure 2). Don't switch Docling's backend to pypdfium2 to fix this: its text extraction adds spaces before punctuation (`[1 ,`).
 - Output layout per paper: `<out>/<pdf stem>/paper.md`, plus `figures/figure-NN.png` and `tables/table-NN.csv`.
@@ -42,8 +44,9 @@ Commit once at the end of each step.
 - [x] Step 1: argparse CLI with input validation
 - [x] Step 2: `convert.py`: Docling `DocumentConverter` → `export_to_markdown()` → `paper.md`
 - [x] Step 3: `figures.py`: figures saved as `figure-NN.png` (by figure number) at 216 dpi and linked with their captions; 40/40 correct across the samples
-- [x] Step 4: `tables.py`: data tables → CSV, captions linked; known gaps: superscripts flattened (`10^13` → `1013`), merged cells land on one row
-- [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU at ~35 s per equation. Superscripts in body text and tables are still flattened (`10-9` for 10⁻⁹): Docling leaves `formatting.script` empty, so fixing it needs character positions and font sizes from the PDF
+- [x] Step 4: `tables.py`: data tables → CSV, captions linked; known gap: merged cells land on one row
+- [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU at ~35 s per equation. On by default (`--no-formulas` to skip)
+- [x] Step 5b: `superscripts.py`: sub/superscripts restored in text and tables (Attention: 122 marked, 2 skipped)
 - [ ] Step 6: pytest tests on a small sample PDF
 - Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode
 

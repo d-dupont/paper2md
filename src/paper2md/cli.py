@@ -6,6 +6,7 @@ from pathlib import Path
 
 from paper2md.convert import convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
+from paper2md.superscripts import restore_scripts
 from paper2md.tables import save_tables
 
 
@@ -55,12 +56,16 @@ def main() -> None:
 
     paper_dir.mkdir(parents=True, exist_ok=True)
     figures = save_figures(doc, pdf, paper_dir)
+    # After figures.py, which cuts text by character position (^{...} would shift it), and
+    # before save_tables(), so the CSV files get the marks too.
+    marked, skipped = restore_scripts(doc, pdf)
     tables = save_tables(doc, paper_dir)
     markdown_path = write_markdown(doc, paper_dir)
 
     print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {markdown_path}")
     print(f"Saved {len(figures)} figures to {paper_dir / 'figures'}/")
     print(f"Saved {len(tables)} tables to {paper_dir / 'tables'}/")
+    print(f"Marked {marked} superscripts/subscripts ({skipped} skipped: position in text unclear)")
     print("Detected:")
     for label, count in count_item_types(doc).most_common():
         print(f"  {label:<16}{count}")
