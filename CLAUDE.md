@@ -16,7 +16,7 @@ Everything runs through **uv**. Python 3.12 is pinned in `.python-version`. Don'
 uv run paper2md samples/1512.03385.pdf            # writes to output/1512.03385/
 uv run paper2md samples/1512.03385.pdf --out DIR  # custom output root
 uv run paper2md samples/1512.03385.pdf --ocr      # also OCR page images (only needed for scanned PDFs)
-uv run paper2md samples/1706.03762.pdf --formulas # equations -> LaTeX (~35 s per equation, CPU only)
+uv run paper2md samples/1706.03762.pdf --no-formulas  # skip equation->LaTeX (on by default, ~35 s per equation, CPU only)
 uv add <pkg>        # add a runtime dependency (updates pyproject.toml + uv.lock)
 uv add --dev <pkg>  # add a dev-only dependency
 ```

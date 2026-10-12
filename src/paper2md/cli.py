@@ -28,8 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--formulas",
-        action="store_true",
-        help="convert equations to LaTeX (slower)",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="convert equations to LaTeX (default: on; about 35 s per equation)",
     )
     return parser
 
