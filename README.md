@@ -1,5 +1,7 @@
 # paper2md
 
+[![tests](https://github.com/d-dupont/paper2md/actions/workflows/tests.yml/badge.svg)](https://github.com/d-dupont/paper2md/actions/workflows/tests.yml)
+
 Convert an academic PDF (or an arXiv ID) into clean Markdown, figure images, equation images
 and table CSVs that Claude can read cheaply and cite precisely.
 
