@@ -7,13 +7,18 @@ import signal
 import warnings
 from pathlib import Path
 
+from paper2md.arxiv import download, parse_arxiv_id, pdf_path
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="paper2md",
         description="Convert an academic PDF into Claude-friendly Markdown, figures and tables.",
     )
-    parser.add_argument("pdf", type=Path, help="path to the PDF file to convert")
+    parser.add_argument(
+        "pdf",
+        help="the PDF file to convert, or an arXiv ID or link (e.g. 2307.09288), which is downloaded",
+    )
     parser.add_argument(
         "--out",
         type=Path,
@@ -72,9 +77,18 @@ def run(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    pdf: Path = args.pdf
+    pdf = Path(args.pdf)
     if not pdf.is_file():
-        parser.error(f"file not found: {pdf}")
+        arxiv_id = parse_arxiv_id(args.pdf)
+        if arxiv_id is None:
+            parser.error(f"file not found, and not an arXiv ID or link: {args.pdf}")
+        pdf = pdf_path(arxiv_id, args.out)
+        if not pdf.exists():  # downloaded before: reuse it
+            print(f"Downloading arXiv {arxiv_id} ...", flush=True)
+            try:
+                download(arxiv_id, args.out)
+            except OSError as error:
+                parser.error(f"could not download arXiv {arxiv_id}: {error}")
     if pdf.suffix.lower() != ".pdf":
         parser.error(f"not a .pdf file: {pdf}")
 

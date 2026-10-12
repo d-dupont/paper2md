@@ -5,6 +5,7 @@ from docling_core.types.doc import BoundingBox, CoordOrigin, DoclingDocument, Pr
 from docling_core.types.doc.labels import DocItemLabel
 
 from paper2md.accents import join_accents
+from paper2md.arxiv import folder_name, parse_arxiv_id
 from paper2md.cli import run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
@@ -130,7 +131,7 @@ def test_missing_file_is_a_clear_error(capsys):
     with pytest.raises(SystemExit) as stop:
         run(["no-such-paper.pdf"])
     assert stop.value.code == 2
-    assert "file not found" in capsys.readouterr().err
+    assert "file not found, and not an arXiv ID" in capsys.readouterr().err
 
 
 def test_performance_cores_is_a_positive_number():
@@ -200,3 +201,26 @@ def test_plain_text_table_caption_is_accepted_only_when_it_reads_like_one():
     duplicate = Text("Table 1. Also looks like a caption.")  # Table 1 already has a real one
     found = caption_candidates([proper, unlabelled, sentence, duplicate])
     assert found == [proper, unlabelled]
+
+
+# --- arXiv IDs ------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("text, arxiv_id", [
+    ("2307.09288", "2307.09288"),
+    ("2307.09288v2", "2307.09288v2"),
+    ("arXiv:2307.09288", "2307.09288"),
+    ("https://arxiv.org/abs/2307.09288", "2307.09288"),
+    ("https://arxiv.org/pdf/2307.09288v3.pdf", "2307.09288v3"),
+    ("http://www.arxiv.org/abs/1412.6980/", "1412.6980"),
+    ("hep-th/9901001", "hep-th/9901001"),
+    ("https://arxiv.org/abs/math.GT/0309136", "math.GT/0309136"),
+    ("paper.pdf", None),
+    ("https://example.com/2307.09288", None),
+    ("12345", None),
+])
+def test_arxiv_ids_and_links_are_recognised(text, arxiv_id):
+    assert parse_arxiv_id(text) == arxiv_id
+
+
+def test_old_style_ids_become_safe_folder_names():
+    assert folder_name("hep-th/9901001") == "hep-th_9901001"

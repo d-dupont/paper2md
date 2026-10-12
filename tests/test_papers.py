@@ -8,6 +8,8 @@ import re
 import pytest
 from PIL import Image
 
+from paper2md.arxiv import download, pdf_path
+
 pytestmark = pytest.mark.slow
 
 RESNET, ATTENTION, SCALING_LAWS, SAFETY = "1512.03385", "1706.03762", "2001.08361", "1606.06565"
@@ -140,3 +142,14 @@ def test_equations_become_latex_with_formulas(convert):
     # The image follows the LaTeX, to check it against (the model occasionally errs).
     latex_end = text.index("$$", text.index("$$") + 2)
     assert text.index("![Equation](equations/equation-01.png)") > latex_end
+
+
+# --- arXiv download ---------------------------------------------------------------------------
+
+def test_arxiv_paper_is_downloaded_next_to_its_conversion(tmp_path):
+    try:
+        path = download("1706.03762", tmp_path)
+    except OSError as error:
+        pytest.skip(f"no connection to arXiv: {error}")
+    assert path == pdf_path("1706.03762", tmp_path) == tmp_path / "1706.03762" / "1706.03762.pdf"
+    assert path.read_bytes()[:4] == b"%PDF"
