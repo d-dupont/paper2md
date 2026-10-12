@@ -15,6 +15,7 @@ Everything runs through **uv**. Python 3.12 is pinned in `.python-version`. Don'
 ```bash
 uv run paper2md samples/1512.03385.pdf            # writes to output/1512.03385/
 uv run paper2md samples/1512.03385.pdf --out DIR  # custom output root
+uv run paper2md samples/1512.03385.pdf --ocr      # also OCR page images (only needed for scanned PDFs)
 uv add <pkg>        # add a runtime dependency (updates pyproject.toml + uv.lock)
 uv add --dev <pkg>  # add a dev-only dependency
 ```

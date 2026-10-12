@@ -4,7 +4,8 @@ import argparse
 import time
 from pathlib import Path
 
-from paper2md.convert import convert_pdf, count_item_types
+from paper2md.convert import convert_pdf, count_item_types, write_markdown
+from paper2md.figures import save_figures
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -18,6 +19,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("output"),
         help="folder to write results into (default: output/)",
+    )
+    parser.add_argument(
+        "--ocr",
+        action="store_true",
+        help="read text from page images too (slower; for scanned PDFs)",
     )
     return parser
 
@@ -37,10 +43,15 @@ def main() -> None:
 
     print(f"Converting {pdf} ...")
     start = time.perf_counter()
-    doc = convert_pdf(pdf, paper_dir)
+    doc = convert_pdf(pdf, ocr=args.ocr)
     seconds = time.perf_counter() - start
 
-    print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {paper_dir / 'paper.md'}")
+    paper_dir.mkdir(parents=True, exist_ok=True)
+    figures = save_figures(doc, paper_dir)
+    markdown_path = write_markdown(doc, paper_dir)
+
+    print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {markdown_path}")
+    print(f"Saved {len(figures)} figures to {paper_dir / 'figures'}/")
     print("Detected:")
     for label, count in count_item_types(doc).most_common():
         print(f"  {label:<16}{count}")
