@@ -5,7 +5,7 @@ description: Read, summarize or analyze an academic paper that the user points t
 
 # Reading a paper with paper2md
 
-paper2md is the user's own tool (project: `/Users/da/Desktop/Claude code first projec python PDF tool`).
+paper2md is the user's own tool (project: `/Users/da/Desktop/Claude code first project python PDF tool`).
 It turns a paper into text that is cheaper and more precise to work with than the PDF itself.
 
 ## 1. Find or make the conversion
@@ -17,7 +17,7 @@ use an underscore: `hep-th/9901001` → `hep-th_9901001`) or the PDF's file name
 - Otherwise convert. Use the full command: the `paper2md` alias only exists in interactive shells.
 
   ```bash
-  uv run --project "/Users/da/Desktop/Claude code first projec python PDF tool" paper2md "<PDF path, arXiv ID or arXiv link>" --out ~/papers
+  uv run --project "/Users/da/Desktop/Claude code first project python PDF tool" paper2md "<PDF path, arXiv ID or arXiv link>" --out ~/papers
   ```
 
   It takes about 10–70 seconds and ends with a summary (`Done in …`, counts of figures, equations,
