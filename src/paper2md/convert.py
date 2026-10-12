@@ -1,12 +1,36 @@
 """Runs Docling on a PDF and writes the result as Markdown."""
 
+import os
+import subprocess
 from collections import Counter
 from pathlib import Path
 
+from docling.datamodel.accelerator_options import AcceleratorOptions
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import DoclingDocument, ImageRefMode
+
+
+# Measured on an M1 Max with 8 threads (ResNet and Attention). Used only for the time estimate.
+FORMULA_MODEL_STARTUP_SECONDS = 30
+SECONDS_PER_FORMULA = 20
+
+
+def performance_cores() -> int:
+    """How many fast CPU cores to use for the models.
+
+    Apple Silicon also has slower "efficiency" cores; using them as well made the formula
+    model no faster (80.6 s with 10 threads vs 76.9 s with 8). Docling's default is 4 threads,
+    which took 132.7 s on the same pages.
+    """
+    try:
+        result = subprocess.run(
+            ["sysctl", "-n", "hw.perflevel0.physicalcpu"], capture_output=True, text=True, check=True
+        )
+        return int(result.stdout)
+    except (OSError, ValueError, subprocess.CalledProcessError):  # not macOS
+        return os.cpu_count() or 4
 
 
 def convert_pdf(pdf: Path, ocr: bool = False, formulas: bool = False) -> DoclingDocument:
@@ -16,6 +40,7 @@ def convert_pdf(pdf: Path, ocr: bool = False, formulas: bool = False) -> Docling
         do_ocr=ocr,
         # Run a vision-language model on each detected equation to turn it into LaTeX.
         do_formula_enrichment=formulas,
+        accelerator_options=AcceleratorOptions(num_threads=performance_cores()),
     )
     converter = DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}

@@ -1,10 +1,12 @@
 """Command-line interface: reads the arguments and hands off to the converter."""
 
 import argparse
+import os
+import signal
 import time
 from pathlib import Path
 
-from paper2md.convert import convert_pdf, count_item_types, write_markdown
+from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
 from paper2md.superscripts import restore_scripts
 from paper2md.tables import save_tables
@@ -36,7 +38,36 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def stop_now(_signum, _frame) -> None:
+    """Ctrl+C handler. Docling's equation step swallows the usual KeyboardInterrupt and keeps
+    going, so exit immediately instead. Safe: no output files are written until conversion ends."""
+    print("\nStopped.", flush=True)
+    os._exit(130)
+
+
 def main() -> None:
+    signal.signal(signal.SIGINT, stop_now)
+    run()
+
+
+def convert_with_estimate(pdf: Path, ocr: bool, formulas: bool):
+    """Convert `pdf`; when converting equations, first say how many there are and how long it will take.
+
+    Docling only knows how many equations a paper has after its layout model has run, so we
+    do a quick pass without equations (about 10 s), report, and then the slow pass.
+    """
+    doc = convert_pdf(pdf, ocr=ocr, formulas=False)
+    count = count_item_types(doc)["formula"]
+    if not formulas or count == 0:
+        return doc
+    minutes = (FORMULA_MODEL_STARTUP_SECONDS + count * SECONDS_PER_FORMULA) / 60
+    estimate = f"about {max(round(minutes), 1)} min"
+    print(f"Found {count} equations. Converting them to LaTeX takes {estimate}.")
+    print("Press Ctrl+C to stop, or rerun with --no-formulas to skip equations.")
+    return convert_pdf(pdf, ocr=ocr, formulas=True)
+
+
+def run() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
@@ -51,7 +82,7 @@ def main() -> None:
 
     print(f"Converting {pdf} ...")
     start = time.perf_counter()
-    doc = convert_pdf(pdf, ocr=args.ocr, formulas=args.formulas)
+    doc = convert_with_estimate(pdf, ocr=args.ocr, formulas=args.formulas)
     seconds = time.perf_counter() - start
 
     paper_dir.mkdir(parents=True, exist_ok=True)

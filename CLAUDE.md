@@ -16,7 +16,7 @@ Everything runs through **uv**. Python 3.12 is pinned in `.python-version`. Don'
 uv run paper2md samples/1512.03385.pdf            # writes to output/1512.03385/
 uv run paper2md samples/1512.03385.pdf --out DIR  # custom output root
 uv run paper2md samples/1512.03385.pdf --ocr      # also OCR page images (only needed for scanned PDFs)
-uv run paper2md samples/1706.03762.pdf --no-formulas  # skip equation->LaTeX (on by default, ~35 s per equation, CPU only)
+uv run paper2md samples/1706.03762.pdf --no-formulas  # skip equation->LaTeX (on by default; ~20 s per equation + ~30 s model load)
 uv add <pkg>        # add a runtime dependency (updates pyproject.toml + uv.lock)
 uv add --dev <pkg>  # add a dev-only dependency
 ```
@@ -30,6 +30,7 @@ There are no tests yet (pytest arrives in Step 6). Once it does: `uv run pytest`
 - `convert.py` runs Docling (OCR off by default: identical output on arXiv PDFs at half the time). `figures.py` then post-processes Docling's pictures, because Docling alone splits multi-panel figures, mislinks or drops captions, and crops off axis labels. It groups pictures by their nearest "Figure N" caption (below or beside), extends each crop down to its caption, absorbs short touching text (axis labels) into the figure and removes it from the body, re-parents the caption under the figure (otherwise the Markdown prints it twice), and names files by figure number.
 - `tables.py` drops `document_index` tables (tables of contents, lists of figures: redundant with headings and captions), skips CSV export for an uncaptioned table before the abstract (the authors' title block), links tables lacking a "Table N" caption to the nearest unclaimed one above or below, and writes `table-NN.csv` / `untitled-table-NN.csv`. It runs after `figures.py`, which may detach a figure caption Docling had wrongly attached to a table.
 - `superscripts.py` restores the sub/superscripts Docling flattens (`10-9` → `10^{-9}`, `β1` → `β_{1}`): it reads each character's baseline and font size with pdfium, marks runs smaller and raised/lowered than a nearby same-line character, and finds each run in Docling's text (or table cell) by its surrounding characters, longest unique context first; ambiguous runs are skipped. Order in `cli.py` matters: figures → superscripts → tables. `figures.py` cuts text by character position, which inserted `^{...}` would shift, and the CSV files must be written after the marks. Known gap: stacked inline math (fractions, ∑ limits) comes out garbled.
+- Equations: `cli.convert_with_estimate` does a quick pass without the formula model to count equations, prints a time estimate, then reconverts with it. The formula model (CodeFormulaV2) is CPU-only on Macs; `convert.performance_cores()` sets Docling's threads to the performance-core count (8 threads: 77 s vs Docling's default 4: 133 s; adding efficiency cores didn't help). Docling swallows `KeyboardInterrupt` during the formula step, so `cli.stop_now` handles Ctrl+C with `os._exit(130)`; nothing is written before conversion finishes.
 - `write_markdown` passes `escape_underscores=False` so `x_{1}` isn't written as `x\_{1}`.
 - `layout.py` holds what both share: `Box` (page rectangles in points, top-left origin), `box_of`, and `attach_caption`.
 - Figure images are cropped from our own pypdfium2 render, not Docling's page images: Docling's default `docling-parse` backend renders some vector charts mostly blank (Scaling Laws, Figure 2). Don't switch Docling's backend to pypdfium2 to fix this: its text extraction adds spaces before punctuation (`[1 ,`).
@@ -45,7 +46,7 @@ Commit once at the end of each step.
 - [x] Step 2: `convert.py`: Docling `DocumentConverter` → `export_to_markdown()` → `paper.md`
 - [x] Step 3: `figures.py`: figures saved as `figure-NN.png` (by figure number) at 216 dpi and linked with their captions; 40/40 correct across the samples
 - [x] Step 4: `tables.py`: data tables → CSV, captions linked; known gap: merged cells land on one row
-- [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU at ~35 s per equation. On by default (`--no-formulas` to skip)
+- [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU (~20 s per equation with 8 threads). On by default (`--no-formulas` to skip)
 - [x] Step 5b: `superscripts.py`: sub/superscripts restored in text and tables (Attention: 122 marked, 2 skipped)
 - [ ] Step 6: pytest tests on a small sample PDF
 - Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode
