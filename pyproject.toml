@@ -7,11 +7,17 @@ authors = [
     { name = "David Dupont", email = "dupont@post.com" }
 ]
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["pdf", "markdown", "arxiv", "academic-papers", "docling", "claude", "llm"]
 dependencies = [
     "docling>=2.137.0",
     "pandas>=3.0.6",
     "pypdfium2>=5.14.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/d-dupont/paper2md"
 
 [project.scripts]
 paper2md = "paper2md.cli:main"
