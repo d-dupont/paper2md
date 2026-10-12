@@ -10,6 +10,16 @@ from pathlib import Path
 from paper2md.arxiv import download, parse_arxiv_id, pdf_path
 
 
+def output_dir(value: str) -> Path:
+    """Turn the --out argument into a path, expanding a leading `~` ourselves.
+
+    bash and zsh replace `~` with the home directory before the program ever sees it, so this
+    never came up on macOS. PowerShell passes it through unchanged, so `--out ~/papers` on
+    Windows would create a folder named literally `~`. expanduser() leaves other paths alone.
+    """
+    return Path(value).expanduser()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="paper2md",
@@ -21,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--out",
-        type=Path,
+        type=output_dir,
         default=Path("output"),
         help="folder to write results into (default: output/)",
     )

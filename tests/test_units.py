@@ -1,12 +1,14 @@
 """Fast tests of single functions on small, hand-made inputs (no Docling run)."""
 
+from pathlib import Path
+
 import pytest
 from docling_core.types.doc import BoundingBox, CoordOrigin, DoclingDocument, ProvenanceItem, Size
 from docling_core.types.doc.labels import DocItemLabel
 
 from paper2md.accents import join_accents
 from paper2md.arxiv import folder_name, parse_arxiv_id
-from paper2md.cli import run
+from paper2md.cli import build_parser, run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
 from paper2md.layout import Box
@@ -140,6 +142,15 @@ def test_missing_file_is_a_clear_error(capsys):
         run(["no-such-paper.pdf"])
     assert stop.value.code == 2
     assert "file not found, and not an arXiv ID" in capsys.readouterr().err
+
+
+def test_out_expands_a_leading_tilde():
+    # PowerShell hands `~` to the program unchanged, where bash would already have replaced it.
+    assert build_parser().parse_args(["p.pdf", "--out", "~/papers"]).out == Path.home() / "papers"
+
+
+def test_out_leaves_other_paths_alone():
+    assert build_parser().parse_args(["p.pdf", "--out", "papers"]).out == Path("papers")
 
 
 def test_performance_cores_is_a_positive_number():
