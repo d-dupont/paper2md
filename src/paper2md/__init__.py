@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from paper2md!")
+"""paper2md: convert academic PDFs into Claude-friendly Markdown."""
