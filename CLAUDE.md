@@ -34,6 +34,11 @@ uv run pytest tests/test_units.py::test_ambiguous_run_is_left_alone   # one test
 
 `tests/test_units.py` checks single functions on hand-made inputs. `tests/test_papers.py` (marked `slow`) runs the real command on sample papers and checks what was verified by hand: figure/caption links, table CSVs, superscripts, page markers, equations. `conftest.py` downloads missing samples from arXiv (the PDFs aren't committed) and converts each paper only once per test run. When fixing a bug, add a test that fails without the fix.
 
+## Everyday use (outside this project)
+
+- `~/.zshrc` has an alias: `paper2md <pdf | arXiv ID | link>` from any folder, writing to `~/papers/<id>/` (it runs this project via `uv run --project`, so the locked versions in `uv.lock` are used).
+- The Claude Code skill `read-paper` lives in `skills/read-paper/SKILL.md` and is symlinked from `~/.claude/skills/read-paper`. It tells Claude to reuse `~/papers/<id>/paper.md` or convert with the full `uv run --project ...` command (aliases don't load in non-interactive shells), and how to read the format. Keep it in sync when the output format or options change.
+
 ## Architecture
 
 - `pyproject.toml` maps the `paper2md` command to `paper2md.cli:main` (src layout, `uv_build` backend).
