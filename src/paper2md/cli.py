@@ -68,9 +68,10 @@ def convert_with_estimate(pdf: Path, ocr: bool, formulas: bool):
     return convert_pdf(pdf, ocr=ocr, formulas=True)
 
 
-def run() -> None:
+def run(argv: list[str] | None = None) -> None:
+    """The whole conversion. `argv` defaults to the command line; tests pass a list."""
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     pdf: Path = args.pdf
     if not pdf.is_file():

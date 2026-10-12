@@ -21,7 +21,16 @@ uv add <pkg>        # add a runtime dependency (updates pyproject.toml + uv.lock
 uv add --dev <pkg>  # add a dev-only dependency
 ```
 
-There are no tests yet (pytest arrives in Step 6). Once it does: `uv run pytest`, or `uv run pytest tests/test_convert.py::test_name` for a single test.
+Tests:
+
+```bash
+uv run pytest                    # everything (~2 min: converts 4 sample papers, one with equations)
+uv run pytest -m "not slow"      # unit tests only (<1 s), for quick checks while editing
+uv run pytest -k page_marker     # tests whose name contains "page_marker"
+uv run pytest tests/test_units.py::test_ambiguous_run_is_left_alone   # one test
+```
+
+`tests/test_units.py` checks single functions on hand-made inputs. `tests/test_papers.py` (marked `slow`) runs the real command on sample papers and checks what was verified by hand: figure/caption links, table CSVs, superscripts, page markers, equations. `conftest.py` downloads missing samples from arXiv (the PDFs aren't committed) and converts each paper only once per test run. When fixing a bug, add a test that fails without the fix.
 
 ## Architecture
 
@@ -50,7 +59,7 @@ Commit once at the end of each step.
 - [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU (~20 s per equation with 8 threads). On by default (`--no-formulas` to skip)
 - [x] Step 5b: `superscripts.py`: sub/superscripts restored in text and tables (Attention: 122 marked, 2 skipped)
 - [x] Page markers `[p. N]` for citing (`pages.py`)
-- [ ] Step 6: pytest tests on a small sample PDF
+- [x] Step 6: pytest suite: 13 unit tests + 12 end-to-end tests on 4 sample papers
 - Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode
 
 ## Sample PDFs (in `samples/`, named `<arXiv id>.pdf`)

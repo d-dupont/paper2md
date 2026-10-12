@@ -39,10 +39,11 @@ def mark_page_breaks_inside_text(doc: DoclingDocument, names: dict[int, str]) ->
             before, after = item.text[:start].rstrip(), item.text[start:].lstrip()
             new_text = f"{before} [p. {names[current.page_no]}] {after}"
             # Later code (figures.py) cuts text by these character positions, so shift every
-            # part that starts at or after the insertion point.
+            # part after the insertion point. This page's part now starts right after the marker.
             delta = len(new_text) - len(item.text)
             for later in provs[index:]:
                 later.charspan = (later.charspan[0] + delta, later.charspan[1] + delta)
+            current.charspan = (len(new_text) - len(after), current.charspan[1])
             item.text = new_text
             count += 1
     return count
