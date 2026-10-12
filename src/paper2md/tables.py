@@ -13,9 +13,12 @@ import pandas as pd
 from docling_core.types.doc import DoclingDocument, TableItem, TextItem
 from docling_core.types.doc.labels import DocItemLabel
 
-from paper2md.layout import Box, attach_caption, box_of
+from paper2md.layout import Box, attach_caption, box_of, continue_caption
 
 TABLE_CAPTION = re.compile(r"^\s*table\s*(\d+)", re.IGNORECASE)
+# A plain-text block only counts as a caption when the number is followed by ":" or "." (or
+# nothing): "Table 5: SFT annotation ..." is a caption, "Table 5 shows ..." is a sentence.
+TEXT_TABLE_CAPTION = re.compile(r"^\s*table\s*(\d+)\s*([:.]|$)", re.IGNORECASE)
 FIRST_SECTION = re.compile(r"^\s*(abstract|1\.?\s|i\.?\s|introduction)", re.IGNORECASE)
 
 
@@ -45,14 +48,27 @@ def nearest_caption(table_box: Box, captions: list[tuple[TextItem, Box]]) -> Tex
     return best
 
 
+def caption_candidates(texts: list[TextItem]) -> list[TextItem]:
+    """All "Table N" captions among `texts`.
+
+    Docling sometimes labels a caption as plain text (11 tables in the Llama 2 paper). Such
+    text is accepted only for table numbers that have no properly labelled caption, and only
+    when it reads like a caption ("Table 5: ...", not "Table 5 shows ...").
+    """
+    labelled = [t for t in texts if t.label == DocItemLabel.CAPTION and t.prov and table_number(t) is not None]
+    have_caption = {table_number(t) for t in labelled}
+    unlabelled = [
+        t for t in texts
+        if t.label == DocItemLabel.TEXT and t.prov and TEXT_TABLE_CAPTION.match(t.text)
+        and table_number(t) not in have_caption
+    ]
+    return labelled + unlabelled
+
+
 def link_captions(doc: DoclingDocument, tables: list[TableItem]) -> None:
     """Give each table without a proper caption the nearest unclaimed "Table N" caption."""
     claimed = {c.self_ref for t in tables if (c := current_caption(doc, t)) is not None}
-    free = [
-        t for t in doc.texts
-        if t.label == DocItemLabel.CAPTION and t.prov and table_number(t) is not None
-        and t.self_ref not in claimed
-    ]
+    free = [t for t in caption_candidates(doc.texts) if t.self_ref not in claimed]
     for table in tables:
         if current_caption(doc, table) is not None:
             continue
@@ -61,6 +77,7 @@ def link_captions(doc: DoclingDocument, tables: list[TableItem]) -> None:
         caption = nearest_caption(box_of(table.prov[0], doc), candidates)
         if caption is not None:
             attach_caption(doc, table, caption)
+            continue_caption(doc, caption)
             free.remove(caption)
 
 

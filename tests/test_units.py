@@ -13,7 +13,7 @@ from paper2md.reading_order import Entry, column_order
 from paper2md.row_groups import find_groups
 from paper2md.pages import mark_page_breaks_inside_text
 from paper2md.superscripts import Run, locate, mark, normalize
-from paper2md.tables import nearest_caption, table_number
+from paper2md.tables import caption_candidates, nearest_caption, table_number
 
 
 # --- layout.Box -----------------------------------------------------------------------
@@ -187,3 +187,16 @@ def test_column_order_reads_full_width_then_left_then_right_then_footnotes():
     assert [e.item.name for e in column_order(docling_order)] == [
         "title", "abstract", "intro", "figure 1", "right text", "footnote",
     ]
+
+
+def test_plain_text_table_caption_is_accepted_only_when_it_reads_like_one():
+    class Text:
+        def __init__(self, text, label=DocItemLabel.TEXT):
+            self.text, self.label, self.prov = text, label, ["somewhere"]
+
+    proper = Text("Table 1: Results.", DocItemLabel.CAPTION)
+    unlabelled = Text("Table 5: SFT annotation example.")  # Llama 2: labelled as plain text
+    sentence = Text("Table 8 shows that the reward model is accurate.")
+    duplicate = Text("Table 1. Also looks like a caption.")  # Table 1 already has a real one
+    found = caption_candidates([proper, unlabelled, sentence, duplicate])
+    assert found == [proper, unlabelled]
