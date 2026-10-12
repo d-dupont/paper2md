@@ -34,7 +34,7 @@ Commit once at the end of each step.
 
 - [x] Step 0: scaffold (uv package, git)
 - [x] Step 1: argparse CLI with input validation
-- [ ] Step 2: `convert.py`: Docling `DocumentConverter` → `export_to_markdown()` → `paper.md`
+- [x] Step 2: `convert.py`: Docling `DocumentConverter` → `export_to_markdown()` → `paper.md`
 - [ ] Step 3: `figures.py`: `generate_picture_images=True`, `images_scale≈2`; save `doc.pictures` with `caption_text(doc)`; Markdown via `ImageRefMode.REFERENCED`
 - [ ] Step 4: `tables.py`: `doc.tables` → `export_to_dataframe()` → CSV
 - [ ] Step 5: `--formulas` flag → `do_formula_enrichment=True` (slow; LaTeX equations)

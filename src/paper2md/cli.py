@@ -1,7 +1,10 @@
 """Command-line interface: reads the arguments and hands off to the converter."""
 
 import argparse
+import time
 from pathlib import Path
+
+from paper2md.convert import convert_pdf, count_item_types
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,5 +35,12 @@ def main() -> None:
     # Each paper gets its own subfolder, named after the PDF (e.g. output/1512.03385/).
     paper_dir = args.out / pdf.stem
 
-    print(f"Input:  {pdf}")
-    print(f"Output: {paper_dir}/")
+    print(f"Converting {pdf} ...")
+    start = time.perf_counter()
+    doc = convert_pdf(pdf, paper_dir)
+    seconds = time.perf_counter() - start
+
+    print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {paper_dir / 'paper.md'}")
+    print("Detected:")
+    for label, count in count_item_types(doc).most_common():
+        print(f"  {label:<16}{count}")
