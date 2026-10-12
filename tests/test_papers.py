@@ -125,7 +125,18 @@ def test_footnote_read_after_the_next_page_keeps_its_own_page(convert):
 
 # --- equations (the slowest test: loads the formula model) --------------------------------
 
-def test_equations_become_latex(convert):
+def test_equations_are_saved_as_images_by_default(convert):
+    folder = convert(RESNET)
+    assert sorted(p.name for p in (folder / "equations").iterdir()) == ["equation-01.png", "equation-02.png"]
+    text = markdown(folder)
+    assert "![Equation](equations/equation-01.png)" in text
+    assert "formula-not-decoded" not in text
+
+
+def test_equations_become_latex_with_formulas(convert):
     text = markdown(convert(RESNET, formulas=True))
     assert text.count("$$") == 2 * 2  # ResNet's two display equations, each wrapped in $$...$$
     assert "formula-not-decoded" not in text
+    # The image follows the LaTeX, to check it against (the model occasionally errs).
+    latex_end = text.index("$$", text.index("$$") + 2)
+    assert text.index("![Equation](equations/equation-01.png)") > latex_end

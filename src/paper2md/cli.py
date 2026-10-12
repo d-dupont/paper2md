@@ -28,8 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--formulas",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help="convert equations to LaTeX (default: on; about 20 s per equation)",
+        default=False,
+        help="also convert equations to LaTeX text (slow: about 20 s per equation); "
+        "without it, equations are saved as images",
     )
     parser.add_argument(
         "--verbose",
