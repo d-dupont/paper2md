@@ -8,6 +8,7 @@ from pathlib import Path
 
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
+from paper2md.pages import add_page_markers
 from paper2md.superscripts import restore_scripts
 from paper2md.tables import save_tables
 
@@ -86,6 +87,9 @@ def run() -> None:
     seconds = time.perf_counter() - start
 
     paper_dir.mkdir(parents=True, exist_ok=True)
+    # First: inserting markers shifts character positions, which add_page_markers corrects for
+    # the steps after it.
+    pages = add_page_markers(doc, pdf)
     figures = save_figures(doc, pdf, paper_dir)
     # After figures.py, which cuts text by character position (^{...} would shift it), and
     # before save_tables(), so the CSV files get the marks too.
@@ -94,6 +98,7 @@ def run() -> None:
     markdown_path = write_markdown(doc, paper_dir)
 
     print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {markdown_path}")
+    print(f"Added {pages} page markers")
     print(f"Saved {len(figures)} figures to {paper_dir / 'figures'}/")
     print(f"Saved {len(tables)} tables to {paper_dir / 'tables'}/")
     print(f"Marked {marked} superscripts/subscripts ({skipped} skipped: position in text unclear)")
