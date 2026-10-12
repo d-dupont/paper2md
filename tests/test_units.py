@@ -9,6 +9,7 @@ from paper2md.cli import run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
 from paper2md.layout import Box
+from paper2md.row_groups import find_groups
 from paper2md.pages import mark_page_breaks_inside_text
 from paper2md.superscripts import Run, locate, mark, normalize
 from paper2md.tables import nearest_caption, table_number
@@ -149,3 +150,18 @@ def test_performance_cores_is_a_positive_number():
 ])
 def test_accents_are_joined_to_their_letter(broken, fixed):
     assert join_accents(broken) == fixed
+
+
+# --- row groups in tables -------------------------------------------------------------------
+
+def test_group_label_spans_the_rows_between_two_lines():
+    # Attention's Table 3, measured: lines between groups, row centres, first-column labels.
+    rules = [129.9, 153.9, 166.5, 211.9, 235.4, 313.5]
+    centers = {0: 142.4, 1: 160.8, 2: 173.5, 3: 184.4, 4: 194.4, 5: 206.2, 6: 218.9, 7: 228.7}
+    labels = {1: "base", 4: "(A)", 7: "(B)"}
+    assert find_groups(centers, rules, labels) == [(4, 2, 5), (7, 6, 7)]
+
+
+def test_band_with_two_labels_is_not_a_group():
+    rules = [0, 10, 50, 60]
+    assert find_groups({1: 15, 2: 25, 3: 35}, rules, {1: "RPN", 3: "RPN+RCNN"}) == []

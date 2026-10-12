@@ -58,6 +58,14 @@ def test_tables_are_saved_by_number_with_correct_values(convert):
     assert "27.94" in table_2 and "25.03" in table_2  # values checked against the PDF
 
 
+def test_row_group_label_is_repeated_on_each_row_of_its_group(convert):
+    lines = (convert(ATTENTION) / "tables" / "table-03.csv").read_text(encoding="utf-8").splitlines()
+    first_column = [line.split(",")[0] for line in lines[1:]]
+    assert first_column[:9] == ["base", "(A)", "(A)", "(A)", "(A)", "(B)", "(B)", "(C)", "(C)"]
+    # Blanks in other columns mean "same as base" and must stay blank.
+    assert lines[2].split(",")[1] == ""
+
+
 def test_title_block_and_table_of_contents_are_not_tables(convert):
     assert not list((convert(SAFETY) / "tables").iterdir())  # only "table" was the author grid
     assert ". . . ." not in markdown(convert(SCALING_LAWS))  # list of figures/tables removed

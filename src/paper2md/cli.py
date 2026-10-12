@@ -10,6 +10,7 @@ from paper2md.accents import fix_accents
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
 from paper2md.pages import mark_page_breaks_inside_text, mark_page_starts, page_names
+from paper2md.row_groups import fill_row_groups
 from paper2md.superscripts import restore_scripts
 from paper2md.tables import save_tables
 
@@ -99,6 +100,7 @@ def run(argv: list[str] | None = None) -> None:
     # before save_tables(), so the CSV files get the marks too.
     marked, skipped = restore_scripts(doc, pdf)
     fix_accents(doc)
+    fill_row_groups(doc, pdf)
     tables = save_tables(doc, paper_dir)
     markdown_path = write_markdown(doc, paper_dir)
 
