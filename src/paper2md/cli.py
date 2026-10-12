@@ -9,7 +9,7 @@ from pathlib import Path
 from paper2md.accents import fix_accents
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
-from paper2md.pages import add_page_markers
+from paper2md.pages import mark_page_breaks_inside_text, mark_page_starts, page_names
 from paper2md.superscripts import restore_scripts
 from paper2md.tables import save_tables
 
@@ -89,10 +89,12 @@ def run(argv: list[str] | None = None) -> None:
     seconds = time.perf_counter() - start
 
     paper_dir.mkdir(parents=True, exist_ok=True)
-    # First: inserting markers shifts character positions, which add_page_markers corrects for
-    # the steps after it.
-    pages = add_page_markers(doc, pdf)
+    names = page_names(pdf)
+    # First: inserting markers into paragraphs shifts character positions (pages.py corrects
+    # the stored ones), and figures.py cuts text by those positions.
+    pages = mark_page_breaks_inside_text(doc, names)
     figures = save_figures(doc, pdf, paper_dir)
+    pages += mark_page_starts(doc, names)
     # After figures.py, which cuts text by character position (^{...} would shift it), and
     # before save_tables(), so the CSV files get the marks too.
     marked, skipped = restore_scripts(doc, pdf)

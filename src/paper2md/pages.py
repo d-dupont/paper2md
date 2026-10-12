@@ -1,9 +1,10 @@
 """Adds page markers like [p. 12] so text can be cited by page.
 
-A marker goes before the first item on each new page. A paragraph that runs over a page
-break gets its marker inside the text, at the exact character where the new page starts
-(Docling records which characters came from which page). The page name is the PDF's own
-printed page label when it has one (journals often start at e.g. 4567), else 1, 2, 3, ...
+A marker goes before each item that starts on a different page than the previous one ended
+on. A paragraph that runs over a page break gets its marker inside the text, at the exact
+character where the new page starts (Docling records which characters came from which
+page). The page name is the PDF's own printed page label when it has one (journals often
+start at e.g. 4567), else 1, 2, 3, ...
 """
 
 from pathlib import Path
@@ -49,23 +50,23 @@ def mark_page_breaks_inside_text(doc: DoclingDocument, names: dict[int, str]) ->
     return count
 
 
-def add_page_markers(doc: DoclingDocument, pdf: Path) -> int:
-    """Add [p. N] markers to `doc`. Must run before anything that cuts text by position.
+def mark_page_starts(doc: DoclingDocument, names: dict[int, str]) -> int:
+    """Insert a "[p. N]" line before each item that starts on a different page than the previous
+    item ended on. Returns how many.
 
-    Returns the number of markers added.
+    Usually that is the next page, but Docling reads each page's footnotes after the start of
+    the following page, so a footnote gets its own marker and the text after it gets the
+    following page's marker again. Run this after figures.py: a piece it cuts out (an axis label
+    glued onto a paragraph) must not count as the start of a page.
     """
-    names = page_names(pdf)
-    count = mark_page_breaks_inside_text(doc, names)
-
-    # In reading order, find the first item that starts on a page later than everything so far.
-    starts, last_page = [], 0
+    starts, current = [], 0
     for item, _level in doc.iterate_items():
-        pages = [p.page_no for p in getattr(item, "prov", [])]
-        if not pages:
+        provs = sorted(getattr(item, "prov", []), key=lambda p: p.charspan[0])
+        if not provs:
             continue
-        if pages[0] > last_page:
-            starts.append((item, pages[0]))
-        last_page = max(last_page, *pages)
+        if provs[0].page_no != current:
+            starts.append((item, provs[0].page_no))
+        current = provs[-1].page_no
     for item, page_no in starts:
         doc.insert_text(sibling=item, label=DocItemLabel.TEXT, text=f"[p. {names[page_no]}]", after=False)
-    return count + len(starts)
+    return len(starts)

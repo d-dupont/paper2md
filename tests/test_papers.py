@@ -81,9 +81,19 @@ def test_underscores_are_not_escaped(convert):
 # --- page markers -----------------------------------------------------------------------
 
 @pytest.mark.parametrize("paper, pages", [(RESNET, 12), (SAFETY, 29)])
-def test_every_page_is_marked_once_in_order(convert, paper, pages):
+def test_every_page_is_marked_in_order(convert, paper, pages):
     found = [int(n) for n in re.findall(r"\[p\. (\d+)\]", markdown(convert(paper)))]
-    assert found == list(range(1, pages + 1))
+    first_seen = list(dict.fromkeys(found))  # each page's first marker, in order of appearance
+    assert first_seen == list(range(1, pages + 1))
+    assert all(a != b for a, b in zip(found, found[1:])), "no page marked twice in a row"
+
+
+def test_footnote_read_after_the_next_page_keeps_its_own_page(convert):
+    # Docling reads ResNet's page-7 footnote after page 8 has started.
+    text = markdown(convert(RESNET))
+    footnote = text.index("With an initial learning rate of 0.1")
+    markers_before = re.findall(r"\[p\. (\d+)\]", text[:footnote])
+    assert markers_before[-1] == "7"
 
 
 # --- equations (the slowest test: loads the formula model) --------------------------------

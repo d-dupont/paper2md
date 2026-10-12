@@ -26,6 +26,7 @@ LABEL_GAP = 8.0  # points: how close a label must be to the figure to count as t
 # Pages are rendered at 3x (216 dpi) so small text in figures stays legible. We render them
 # with pdfium ourselves: Docling's own page images can miss parts of some vector charts.
 RENDER_SCALE = 3.0
+DANGLING_PAGE_MARKER = re.compile(r"\s*\[p\. [^\]]+\]\s*$")
 
 
 @dataclass
@@ -161,6 +162,9 @@ def remove_fragments(doc: DoclingDocument, fragments: list[tuple[TextItem, Prove
         for prov in sorted(provs, key=lambda p: p.charspan[0], reverse=True):
             start, end = prov.charspan
             item.text = item.text[:start].rstrip() + item.text[end:]
+        # If the cut piece was a paragraph's part on the next page (e.g. an axis label Docling
+        # glued on), the page marker pages.py put before it now points at nothing.
+        item.text = DANGLING_PAGE_MARKER.sub("", item.text)
         item.prov = [p for p in item.prov if all(p is not q for q in provs)]
     if to_delete:
         doc.delete_items(node_items=to_delete)
