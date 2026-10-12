@@ -149,6 +149,17 @@ def test_out_expands_a_leading_tilde():
     assert build_parser().parse_args(["p.pdf", "--out", "~/papers"]).out == Path.home() / "papers"
 
 
+def test_input_path_expands_a_leading_tilde(tmp_path, monkeypatch, capsys):
+    # Home is a temporary folder holding a non-PDF. Found via `~` -> "not a .pdf file";
+    # not found (the bug) -> "file not found". Either way it stops before converting anything.
+    monkeypatch.setenv("HOME", str(tmp_path))  # read by expanduser() on macOS and Linux
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # read by expanduser() on Windows
+    (tmp_path / "notes.txt").write_text("not a paper")
+    with pytest.raises(SystemExit):
+        run(["~/notes.txt"])
+    assert "not a .pdf file" in capsys.readouterr().err
+
+
 def test_out_leaves_other_paths_alone():
     assert build_parser().parse_args(["p.pdf", "--out", "papers"]).out == Path("papers")
 

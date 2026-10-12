@@ -87,7 +87,7 @@ def run(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    pdf = Path(args.pdf)
+    pdf = Path(args.pdf).expanduser()  # PowerShell leaves `~` for us to expand: see output_dir()
     if not pdf.is_file():
         arxiv_id = parse_arxiv_id(args.pdf)
         if arxiv_id is None:
