@@ -9,11 +9,13 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import DoclingDocument, ImageRefMode
 
 
-def convert_pdf(pdf: Path, ocr: bool = False) -> DoclingDocument:
+def convert_pdf(pdf: Path, ocr: bool = False, formulas: bool = False) -> DoclingDocument:
     """Run Docling's layout and table models on `pdf` and return the structured document."""
     options = PdfPipelineOptions(
         # arXiv PDFs contain real text, so OCR (reading text from page images) is off by default.
         do_ocr=ocr,
+        # Run a vision-language model on each detected equation to turn it into LaTeX.
+        do_formula_enrichment=formulas,
     )
     converter = DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}

@@ -16,6 +16,7 @@ Everything runs through **uv**. Python 3.12 is pinned in `.python-version`. Don'
 uv run paper2md samples/1512.03385.pdf            # writes to output/1512.03385/
 uv run paper2md samples/1512.03385.pdf --out DIR  # custom output root
 uv run paper2md samples/1512.03385.pdf --ocr      # also OCR page images (only needed for scanned PDFs)
+uv run paper2md samples/1706.03762.pdf --formulas # equations -> LaTeX (~35 s per equation, CPU only)
 uv add <pkg>        # add a runtime dependency (updates pyproject.toml + uv.lock)
 uv add --dev <pkg>  # add a dev-only dependency
 ```
@@ -42,7 +43,7 @@ Commit once at the end of each step.
 - [x] Step 2: `convert.py`: Docling `DocumentConverter` → `export_to_markdown()` → `paper.md`
 - [x] Step 3: `figures.py`: figures saved as `figure-NN.png` (by figure number) at 216 dpi and linked with their captions; 40/40 correct across the samples
 - [x] Step 4: `tables.py`: data tables → CSV, captions linked; known gaps: superscripts flattened (`10^13` → `1013`), merged cells land on one row
-- [ ] Step 5: `--formulas` flag → `do_formula_enrichment=True` (slow; LaTeX equations)
+- [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU at ~35 s per equation. Superscripts in body text and tables are still flattened (`10-9` for 10⁻⁹): Docling leaves `formatting.script` empty, so fixing it needs character positions and font sizes from the PDF
 - [ ] Step 6: pytest tests on a small sample PDF
 - Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode
 

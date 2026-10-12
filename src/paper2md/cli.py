@@ -26,6 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="read text from page images too (slower; for scanned PDFs)",
     )
+    parser.add_argument(
+        "--formulas",
+        action="store_true",
+        help="convert equations to LaTeX (slower)",
+    )
     return parser
 
 
@@ -44,7 +49,7 @@ def main() -> None:
 
     print(f"Converting {pdf} ...")
     start = time.perf_counter()
-    doc = convert_pdf(pdf, ocr=args.ocr)
+    doc = convert_pdf(pdf, ocr=args.ocr, formulas=args.formulas)
     seconds = time.perf_counter() - start
 
     paper_dir.mkdir(parents=True, exist_ok=True)
