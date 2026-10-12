@@ -6,6 +6,7 @@ from pathlib import Path
 
 from paper2md.convert import convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
+from paper2md.tables import save_tables
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,10 +49,12 @@ def main() -> None:
 
     paper_dir.mkdir(parents=True, exist_ok=True)
     figures = save_figures(doc, pdf, paper_dir)
+    tables = save_tables(doc, paper_dir)
     markdown_path = write_markdown(doc, paper_dir)
 
     print(f"Done in {seconds:.1f}s: {doc.num_pages()} pages -> {markdown_path}")
     print(f"Saved {len(figures)} figures to {paper_dir / 'figures'}/")
+    print(f"Saved {len(tables)} tables to {paper_dir / 'tables'}/")
     print("Detected:")
     for label, count in count_item_types(doc).most_common():
         print(f"  {label:<16}{count}")

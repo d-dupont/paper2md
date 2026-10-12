@@ -12,11 +12,12 @@ captions start with "Figure N" and sit next to (usually right below) their figur
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import NamedTuple
 
 import pypdfium2
 from docling_core.types.doc import DoclingDocument, ImageRef, PictureItem, ProvenanceItem, TextItem
 from docling_core.types.doc.labels import DocItemLabel
+
+from paper2md.layout import Box, attach_caption, box_of
 
 FIGURE_CAPTION = re.compile(r"^\s*(?:figure|fig\.)\s*(\d+)", re.IGNORECASE)
 PADDING = 4.0  # points (1/72 inch) of margin added around each crop
@@ -25,24 +26,6 @@ LABEL_GAP = 8.0  # points: how close a label must be to the figure to count as t
 # Pages are rendered at 3x (216 dpi) so small text in figures stays legible. We render them
 # with pdfium ourselves: Docling's own page images can miss parts of some vector charts.
 RENDER_SCALE = 3.0
-
-
-class Box(NamedTuple):
-    """A rectangle in PDF points, measured from the top-left corner of the page."""
-
-    l: float
-    t: float
-    r: float
-    b: float
-
-    def union(self, other: "Box") -> "Box":
-        return Box(min(self.l, other.l), min(self.t, other.t), max(self.r, other.r), max(self.b, other.b))
-
-    def grow(self, margin: float) -> "Box":
-        return Box(self.l - margin, self.t - margin, self.r + margin, self.b + margin)
-
-    def overlaps(self, other: "Box") -> bool:
-        return self.l < other.r and other.l < self.r and self.t < other.b and other.t < self.b
 
 
 @dataclass
@@ -60,11 +43,6 @@ class Figure:
             return None
         match = FIGURE_CAPTION.match(self.caption.text)
         return int(match.group(1)) if match else None
-
-
-def box_of(prov: ProvenanceItem, doc: DoclingDocument) -> Box:
-    bbox = prov.bbox.to_top_left_origin(doc.pages[prov.page_no].size.height)
-    return Box(bbox.l, bbox.t, bbox.r, bbox.b)
 
 
 def find_caption(picture_box: Box, captions: list[tuple[TextItem, Box]]) -> TextItem | None:
@@ -164,23 +142,6 @@ def crop_box(figure: Figure, doc: DoclingDocument) -> Box:
             padded = padded._replace(b=min(padded.b, max(box.b, caption_box.t - PADDING)))
     page = doc.pages[figure.page_no].size
     return Box(max(padded.l, 0), max(padded.t, 0), min(padded.r, page.width), min(padded.b, page.height))
-
-
-def attach_caption(doc: DoclingDocument, picture: PictureItem, caption: TextItem) -> None:
-    """Make `caption` belong to `picture` only, detaching it from wherever Docling put it.
-
-    The Markdown export prints a caption together with the item it belongs to, and prints
-    it again as ordinary text if it is also left in the body, so it must have one owner.
-    """
-    ref = caption.get_ref()
-    old_parent = caption.parent.resolve(doc)
-    old_parent.children = [c for c in old_parent.children if c.cref != ref.cref]
-    for item in [*doc.pictures, *doc.tables]:
-        item.captions = [c for c in item.captions if c.cref != ref.cref]
-    caption.parent = picture.get_ref()
-    caption.label = DocItemLabel.CAPTION  # it may have been labelled as plain text
-    picture.children.append(ref)
-    picture.captions = [ref]
 
 
 def remove_fragments(doc: DoclingDocument, fragments: list[tuple[TextItem, ProvenanceItem]]) -> None:
