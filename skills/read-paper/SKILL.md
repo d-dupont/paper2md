@@ -33,6 +33,8 @@ What the format means:
 
 - **`[p. N]`** marks where page N starts (the PDF's printed page number if it has one). Cite pages for
   claims, e.g. "(p. 7)". A marker inside a paragraph means the paragraph continues on that page.
+  When the printed number differs from the page's position in the PDF, both are given:
+  `[p. 4567 | pdf 3]`. Cite the printed number (4567); "pdf 3" is only for finding the page in a viewer.
 - **Figures**: a caption line followed by `![Image](figures/figure-NN.png)`; NN is the paper's own
   figure number. Open the image only when the answer depends on what the figure shows.
 - **Equations**: `![Equation](equations/equation-NN.png)`, numbered in reading order (not the paper's

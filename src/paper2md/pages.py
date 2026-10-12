@@ -4,7 +4,9 @@ A marker goes before each item that starts on a different page than the previous
 on. A paragraph that runs over a page break gets its marker inside the text, at the exact
 character where the new page starts (Docling records which characters came from which
 page). The page name is the PDF's own printed page label when it has one (journals often
-start at e.g. 4567), else 1, 2, 3, ...
+start at e.g. 4567), else 1, 2, 3, ... When the printed label differs from the page's
+position in the file, both are kept: [p. 4567 | pdf 3], so a citation can be checked
+against either.
 """
 
 from pathlib import Path
@@ -14,10 +16,19 @@ from docling_core.types.doc import DoclingDocument
 from docling_core.types.doc.labels import DocItemLabel
 
 
+def page_name(label: str | None, position: int) -> str:
+    """What goes after "p. " in a marker: the printed label, plus the position in the file
+    ("4567 | pdf 3") when the two differ. No label: just the position."""
+    label = (label or "").strip()
+    if not label or label == str(position):
+        return str(position)
+    return f"{label} | pdf {position}"
+
+
 def page_names(pdf: Path) -> dict[int, str]:
-    """Docling page number (1-based) -> the page's printed label, or its position in the file."""
+    """Docling page number (1-based) -> the page's name for its marker (see page_name)."""
     document = pypdfium2.PdfDocument(pdf)
-    names = {i + 1: (document.get_page_label(i) or "").strip() or str(i + 1) for i in range(len(document))}
+    names = {i + 1: page_name(document.get_page_label(i), i + 1) for i in range(len(document))}
     document.close()
     return names
 

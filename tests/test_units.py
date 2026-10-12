@@ -12,7 +12,7 @@ from paper2md.figures import find_caption
 from paper2md.layout import Box
 from paper2md.reading_order import Entry, column_order
 from paper2md.row_groups import find_groups
-from paper2md.pages import mark_page_breaks_inside_text
+from paper2md.pages import mark_page_breaks_inside_text, page_name
 from paper2md.superscripts import Run, locate, mark, normalize
 from paper2md.tables import caption_candidates, nearest_caption, table_number
 
@@ -123,6 +123,14 @@ def test_page_marker_never_splits_a_word():
     assert item.text == "in addition highway [p. 3] networks"
     start, end = item.prov[1].charspan
     assert item.text[start:end] == "networks"
+
+
+def test_page_name_keeps_printed_label_and_position_when_they_differ():
+    assert page_name("4567", 3) == "4567 | pdf 3"
+    assert page_name("iv", 4) == "iv | pdf 4"
+    assert page_name("3", 3) == "3"  # same number: no need to say it twice
+    assert page_name(None, 5) == "5"  # no printed labels: position only
+    assert page_name("  ", 6) == "6"
 
 
 # --- command line -------------------------------------------------------------------------
