@@ -14,10 +14,10 @@ paragraph split at the column break (no sentence end, next part starts lowercase
 
 from dataclasses import dataclass
 
-from docling_core.types.doc import DocItem, DoclingDocument, ProvenanceItem, TextItem
+from docling_core.types.doc import DocItem, DoclingDocument, ProvenanceItem
 from docling_core.types.doc.labels import DocItemLabel
 
-from paper2md.layout import Box, box_of
+from paper2md.layout import Box, box_of, ends_sentence, move_parts
 
 SKIP = {DocItemLabel.PAGE_HEADER, DocItemLabel.PAGE_FOOTER}
 PARAGRAPH = 100  # characters: shorter text doesn't count as evidence of a column layout
@@ -82,25 +82,6 @@ def column_order(entries: list[Entry]) -> list[Entry]:
         return (section, rank, entry.box.t)
 
     return sorted(entries, key=key)
-
-
-def move_parts(source: TextItem, target: TextItem, parts: list[ProvenanceItem]) -> None:
-    """Move the text of `parts` (locations of `source`) to the end of `target`."""
-    pieces = []
-    for prov in sorted(parts, key=lambda p: p.charspan[0], reverse=True):
-        start, end = prov.charspan
-        pieces.insert(0, (source.text[start:end].strip(), prov))
-        source.text = (source.text[:start].rstrip() + " " + source.text[end:].lstrip()).strip()
-    source.prov = [p for p in source.prov if all(p is not q for q in parts)]
-    for text, prov in pieces:
-        start = len(target.text) + 1
-        target.text = f"{target.text} {text}"
-        prov.charspan = (start, start + len(text))
-        target.prov.append(prov)
-
-
-def ends_sentence(text: str) -> bool:
-    return text.rstrip().endswith((".", "?", "!", ":"))
 
 
 def fix_reading_order(doc: DoclingDocument) -> list[int]:

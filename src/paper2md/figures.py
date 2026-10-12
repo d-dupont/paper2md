@@ -17,12 +17,17 @@ import pypdfium2
 from docling_core.types.doc import DoclingDocument, ImageRef, PictureItem, ProvenanceItem, TextItem
 from docling_core.types.doc.labels import DocItemLabel
 
-from paper2md.layout import Box, attach_caption, box_of
+from paper2md.layout import Box, attach_caption, box_of, continue_caption
 
 FIGURE_CAPTION = re.compile(r"^\s*(?:figure|fig\.)\s*(\d+)", re.IGNORECASE)
 PADDING = 4.0  # points (1/72 inch) of margin added around each crop
 MAX_LABEL_CHARS = 40  # text this short touching a figure is treated as part of it (axis labels)
 LABEL_GAP = 8.0  # points: how close a label must be to the figure to count as touching it
+# A panel title sits directly above the chart, within its width, and is narrower than the
+# figure; a paragraph above a figure is as wide as the column. (Scaling Laws' Figure 2.)
+MAX_TITLE_CHARS = 150
+TITLE_GAP = 12.0  # points between a title's bottom and the figure's top
+MAX_TITLE_WIDTH = 0.6  # share of the figure's width
 # Pages are rendered at 3x (216 dpi) so small text in figures stays legible. We render them
 # with pdfium ourselves: Docling's own page images can miss parts of some vector charts.
 RENDER_SCALE = 3.0
@@ -100,7 +105,7 @@ def group_figures(doc: DoclingDocument) -> list[Figure]:
 
 
 def crop_box(figure: Figure, doc: DoclingDocument) -> Box:
-    """The area to cut out: all panels plus touching short labels, with a margin."""
+    """The area to cut out: all panels plus touching short labels and panel titles, with a margin."""
     box = box_of(figure.pictures[0].prov[0], doc)
     for picture in figure.pictures[1:]:
         box = box.union(box_of(picture.prov[0], doc))
@@ -113,21 +118,39 @@ def crop_box(figure: Figure, doc: DoclingDocument) -> Box:
         # recovers charts that the layout model only partly detected.
         box = box._replace(b=max(box.b, caption_box.t - PADDING))
 
-    # Short text touching the figure is part of it (axis labels, legends). Repeat until
-    # nothing new is added, because absorbing one label can bring the next within reach.
+    # Short text touching the figure is part of it (axis labels, legends), and so are panel
+    # titles right above it. Repeat until nothing new is added, because absorbing one label
+    # can bring the next within reach.
     candidates = [
         (item, prov)
         for item in doc.texts
         if item.label == DocItemLabel.TEXT
         for prov in item.prov
-        if prov.page_no == figure.page_no and prov.charspan[1] - prov.charspan[0] <= MAX_LABEL_CHARS
+        if prov.page_no == figure.page_no and prov.charspan[1] - prov.charspan[0] <= MAX_TITLE_CHARS
     ]
+
+    def is_label(prov, label_box: Box) -> bool:
+        return prov.charspan[1] - prov.charspan[0] <= MAX_LABEL_CHARS and label_box.overlaps(box.grow(LABEL_GAP))
+
+    # Titles are measured against the chart as detected, not the growing box: once one
+    # panel's title is absorbed the box reaches up beside the next panel's title.
+    chart = box
+
+    def is_panel_title(label_box: Box) -> bool:
+        return (
+            0 <= chart.t - label_box.b <= TITLE_GAP
+            and label_box.l >= chart.l - LABEL_GAP and label_box.r <= chart.r + LABEL_GAP
+            and label_box.r - label_box.l <= MAX_TITLE_WIDTH * (chart.r - chart.l)
+        )
+
     added = True
     while added:
         added = False
         for item, prov in candidates:
             label_box = box_of(prov, doc)
-            if any(p is prov for _, p in figure.fragments) or not label_box.overlaps(box.grow(LABEL_GAP)):
+            if any(p is prov for _, p in figure.fragments):
+                continue
+            if not (is_label(prov, label_box) or is_panel_title(label_box)):
                 continue
             if caption_below and label_box.t >= caption_box.t:
                 continue  # text below the caption is not part of the figure
@@ -214,6 +237,7 @@ def save_figures(doc: DoclingDocument, pdf: Path, paper_dir: Path) -> list[tuple
         main.image.uri = relative  # export_to_markdown() writes ![Image](uri)
         if figure.caption is not None:
             attach_caption(doc, main, figure.caption)
+            continue_caption(doc, figure.caption)
         else:
             # Keep Docling's own caption link only if no figure claimed that caption.
             main.captions = [c for c in main.captions if c.cref not in claimed]

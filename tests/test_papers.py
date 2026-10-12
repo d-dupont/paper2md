@@ -40,6 +40,15 @@ def test_axis_labels_do_not_leak_into_the_text(convert):
     assert "iter. (1e4)" not in markdown(convert(RESNET))
 
 
+def test_panel_titles_belong_to_the_figure_and_captions_are_whole(convert):
+    text = markdown(convert(SCALING_LAWS))
+    # Titles printed above Figure 2's panels are inside the image, not loose in the text.
+    assert "Larger models require fewer samples" not in text
+    assert "optimal model size grows smoothly" not in text
+    # The caption's second line, split off by Docling, is joined back on.
+    assert "ranging in size from 10^{3} to 10^{9} parameters (excluding embeddings)." in text
+
+
 def test_partly_detected_chart_is_not_blank(convert):
     # Docling's default renderer drew Scaling Laws' Figure 2 almost blank; we crop from pdfium.
     # Share of darker-than-light-grey pixels: 9.5% for our crop, 1.1% for Docling's blank render.
