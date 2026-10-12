@@ -6,6 +6,7 @@ import signal
 import time
 from pathlib import Path
 
+from paper2md.accents import fix_accents
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
 from paper2md.pages import add_page_markers
@@ -95,6 +96,7 @@ def run(argv: list[str] | None = None) -> None:
     # After figures.py, which cuts text by character position (^{...} would shift it), and
     # before save_tables(), so the CSV files get the marks too.
     marked, skipped = restore_scripts(doc, pdf)
+    fix_accents(doc)
     tables = save_tables(doc, paper_dir)
     markdown_path = write_markdown(doc, paper_dir)
 

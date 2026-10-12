@@ -4,6 +4,7 @@ import pytest
 from docling_core.types.doc import BoundingBox, CoordOrigin, DoclingDocument, ProvenanceItem, Size
 from docling_core.types.doc.labels import DocItemLabel
 
+from paper2md.accents import join_accents
 from paper2md.cli import run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
@@ -132,3 +133,19 @@ def test_missing_file_is_a_clear_error(capsys):
 
 def test_performance_cores_is_a_positive_number():
     assert performance_cores() >= 1
+
+
+# --- accents ------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("broken, fixed", [
+    ("K.-R. M¨uller", "K.-R. Müller"),
+    ("Javier Garc´ıa", "Javier García"),  # LaTeX's accent on a dotless i
+    ("Tamer Ba¸sar", "Tamer Başar"),  # cedilla
+    ("Mich`ele Basseville", "Michèle Basseville"),  # grave stored as a backtick
+    ("batch size ˜B (L)", "batch size B̃ (L)"),  # math accent without a precomposed letter
+    ("(√v_{t} + ˆ ϵ)", "(√v_{t} + ϵ̂)"),  # one space between accent and letter
+    ("```\ncode\n```", "```\ncode\n```"),  # real backticks are left alone
+    ("a ` quote", "a ` quote"),
+])
+def test_accents_are_joined_to_their_letter(broken, fixed):
+    assert join_accents(broken) == fixed
