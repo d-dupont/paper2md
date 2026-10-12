@@ -48,6 +48,16 @@ def test_partly_detected_chart_is_not_blank(convert):
     assert ink > 0.05, f"only {ink:.1%} of Figure 2 is drawn"
 
 
+# --- reading order ----------------------------------------------------------------------
+
+def test_two_column_first_page_reads_left_column_first(convert):
+    text = markdown(convert(RESNET))
+    assert text.index("## Abstract") < text.index("## 1. Introduction") < text.index("Figure 1. Training error")
+    # Paragraphs Docling joined using its wrong order are joined correctly again.
+    assert "tasks [8, 12, 7, 32, 27] have also greatly benefited from very deep models." in text
+    assert "unable to find solutions that [p. 2] are comparably good" in text
+
+
 # --- tables -----------------------------------------------------------------------------
 
 def test_tables_are_saved_by_number_with_correct_values(convert):

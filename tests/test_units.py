@@ -9,6 +9,7 @@ from paper2md.cli import run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
 from paper2md.layout import Box
+from paper2md.reading_order import Entry, column_order
 from paper2md.row_groups import find_groups
 from paper2md.pages import mark_page_breaks_inside_text
 from paper2md.superscripts import Run, locate, mark, normalize
@@ -165,3 +166,24 @@ def test_group_label_spans_the_rows_between_two_lines():
 def test_band_with_two_labels_is_not_a_group():
     rules = [0, 10, 50, 60]
     assert find_groups({1: 15, 2: 25, 3: 35}, rules, {1: "RPN", 3: "RPN+RCNN"}) == []
+
+
+# --- reading order --------------------------------------------------------------------------
+
+def test_column_order_reads_full_width_then_left_then_right_then_footnotes():
+    class Item:
+        def __init__(self, name, label=DocItemLabel.TEXT):
+            self.name, self.label = name, label
+
+    def entry(name, column, top, label=DocItemLabel.TEXT):
+        return Entry(0, Item(name, label), Box(0, top, 0, top + 10), column)
+
+    # Docling's order on ResNet's page 1, simplified: right column before left column.
+    docling_order = [
+        entry("title", "full", 107), entry("figure 1", "right", 224), entry("right text", "right", 378),
+        entry("abstract", "left", 226), entry("intro", "left", 557),
+        entry("footnote", "left", 696, DocItemLabel.FOOTNOTE),
+    ]
+    assert [e.item.name for e in column_order(docling_order)] == [
+        "title", "abstract", "intro", "figure 1", "right text", "footnote",
+    ]

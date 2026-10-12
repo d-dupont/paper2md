@@ -10,6 +10,7 @@ from paper2md.accents import fix_accents
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.figures import save_figures
 from paper2md.pages import mark_page_breaks_inside_text, mark_page_starts, page_names
+from paper2md.reading_order import fix_reading_order
 from paper2md.row_groups import fill_row_groups
 from paper2md.superscripts import restore_scripts
 from paper2md.tables import save_tables
@@ -90,6 +91,8 @@ def run(argv: list[str] | None = None) -> None:
     seconds = time.perf_counter() - start
 
     paper_dir.mkdir(parents=True, exist_ok=True)
+    # Before anything else: the steps below depend on reading order and character positions.
+    fix_reading_order(doc)
     names = page_names(pdf)
     # First: inserting markers into paragraphs shifts character positions (pages.py corrects
     # the stored ones), and figures.py cuts text by those positions.
