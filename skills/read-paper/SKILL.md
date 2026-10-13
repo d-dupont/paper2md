@@ -31,6 +31,9 @@ sections. Don't paste large parts of the paper into replies.
 
 What the format means:
 
+- **The block at the top** (between `---` lines) gives the title, authors and publication date
+  (exact for arXiv papers; other PDFs have only the detected title), the source, the page count,
+  and how the file was made. Use it for citations, e.g. "He et al. (2015), arXiv:1512.03385, p. 6".
 - **`[p. N]`** marks where page N starts (the PDF's printed page number if it has one). Cite pages for
   claims, e.g. "(p. 7)". A marker inside a paragraph means the paragraph continues on that page.
   When the printed number differs from the page's position in the PDF, both are given:

@@ -10,6 +10,7 @@ from paper2md.accents import fix_accents
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.equations import save_equations
 from paper2md.figures import save_figures
+from paper2md.metadata import information_block
 from paper2md.pages import mark_page_breaks_inside_text, mark_page_starts, page_names
 from paper2md.reading_order import fix_reading_order
 from paper2md.row_groups import fill_row_groups
@@ -56,7 +57,7 @@ def process(pdf: Path, paper_dir: Path, ocr: bool, formulas: bool, verbose: bool
     fix_accents(doc)
     fill_row_groups(doc, pdf)
     tables = save_tables(doc, paper_dir)
-    markdown_path = write_markdown(doc, paper_dir)
+    markdown_path = write_markdown(doc, paper_dir, information_block(doc, pdf, formulas))
 
     seconds = time.perf_counter() - start
     print(f"Done in {seconds:.0f}s: {doc.num_pages()} pages -> {markdown_path}")

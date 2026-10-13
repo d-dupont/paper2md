@@ -12,6 +12,7 @@ from paper2md.cli import build_parser, run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
 from paper2md.layout import Box
+from paper2md.metadata import arxiv_id_for, front_matter, parse_arxiv_entry
 from paper2md.reading_order import Entry, column_order
 from paper2md.row_groups import find_groups
 from paper2md.pages import mark_page_breaks_inside_text, page_name
@@ -272,3 +273,33 @@ def test_multi_row_headers_are_joined_with_a_slash():
     ]
     assert column_names(grid) == ["method", "COCO train / COCO val / @.5", "COCO train / COCO val / @[.5, .95]"]
     assert column_names([[Cell("1", 0, header=False)]]) is None
+
+
+# --- information block ----------------------------------------------------------------------
+
+def test_arxiv_metadata_is_read_from_the_api_response():
+    # Shortened from https://export.arxiv.org/api/query?id_list=1512.03385
+    atom = b"""<feed xmlns="http://www.w3.org/2005/Atom"><entry>
+        <id>http://arxiv.org/abs/1512.03385v1</id>
+        <published>2015-12-10T19:51:55Z</published>
+        <title>Deep Residual Learning for Image
+          Recognition</title>
+        <author><name>Kaiming He</name></author><author><name>Xiangyu Zhang</name></author>
+    </entry></feed>"""
+    assert parse_arxiv_entry(atom) == {
+        "title": "Deep Residual Learning for Image Recognition",
+        "authors": ["Kaiming He", "Xiangyu Zhang"],
+        "published": "2015-12-10",
+    }
+    assert parse_arxiv_entry(b'<feed xmlns="http://www.w3.org/2005/Atom"></feed>') is None  # unknown ID
+
+
+def test_front_matter_quotes_titles_and_skips_empty_fields():
+    block = front_matter({"title": "Llama 2: Open Models", "authors": ["A", "B"], "url": None, "pages": 77})
+    assert block == '---\ntitle: "Llama 2: Open Models"\nauthors: ["A", "B"]\npages: 77\n---\n\n'
+
+
+def test_arxiv_id_is_recognised_from_the_saved_file_name():
+    assert arxiv_id_for(Path("~/papers/1512.03385/1512.03385.pdf")) == "1512.03385"
+    assert arxiv_id_for(Path("hep-th_9901001.pdf")) == "hep-th/9901001"
+    assert arxiv_id_for(Path("safety paper.pdf")) is None

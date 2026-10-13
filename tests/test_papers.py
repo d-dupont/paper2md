@@ -107,6 +107,13 @@ def test_underscores_are_not_escaped(convert):
     assert "\\_" not in markdown(convert(ATTENTION))
 
 
+def test_paper_starts_with_an_information_block(convert):
+    text = markdown(convert(RESNET))
+    assert text.startswith('---\ntitle: "Deep Residual Learning for Image Recognition"\n')
+    assert 'source: "arXiv:1512.03385"' in text.split("\n---\n")[0]
+    assert "pages: 12" in text.split("\n---\n")[0]
+
+
 def test_less_than_and_ampersand_are_written_plainly(convert):
     text = markdown(convert(RESNET))
     assert "(<90% error)" in text

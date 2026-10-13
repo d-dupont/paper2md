@@ -48,15 +48,15 @@ def convert_pdf(pdf: Path, ocr: bool = False, formulas: bool = False) -> Docling
     return converter.convert(pdf).document
 
 
-def write_markdown(doc: DoclingDocument, paper_dir: Path) -> Path:
-    """Write `paper_dir/paper.md`, linking figures to the files that figures.py saved."""
+def write_markdown(doc: DoclingDocument, paper_dir: Path, header: str = "") -> Path:
+    """Write `paper_dir/paper.md`, starting with `header` (metadata.py's information block)."""
     path = paper_dir / "paper.md"
     # Write text as it is, for Claude rather than for a Markdown viewer: no "\\_" (subscripts
     # are written x_{1}) and no "&lt;" / "&amp;" ("|∆| < α", "Hinton & Salakhutdinov").
     markdown = doc.export_to_markdown(
         image_mode=ImageRefMode.REFERENCED, escape_underscores=False, escape_html=False
     )
-    path.write_text(markdown, encoding="utf-8")
+    path.write_text(header + markdown, encoding="utf-8")
     return path
 
 

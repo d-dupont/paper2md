@@ -37,6 +37,14 @@ keep every claim citable.
 An excerpt of `paper.md`:
 
 ```markdown
+---
+title: "Deep Residual Learning for Image Recognition"
+authors: ["Kaiming He", "Xiangyu Zhang", "Shaoqing Ren", "Jian Sun"]
+published: "2015-12-10"
+source: "arXiv:1512.03385"
+pages: 12
+---
+
 Figure 4. Training on ImageNet. Thin curves denote training error, and bold curves denote ...
 
 ![Image](figures/figure-04.png)
@@ -56,6 +64,8 @@ The function F(x, {W_{i}}) represents the residual mapping to be learned ...
   row they cover.
 - **Sub- and superscripts** that PDF text extraction flattens are restored (`10^{-9}`, `d_{model}`),
   in the text and in the CSVs, and accents are fixed (`M¨uller` → `Müller`).
+- **An information block** at the top of `paper.md` gives the title, authors and date (from arXiv's
+  API for arXiv papers), the source and page count, so Claude can cite the paper properly.
 - **Page markers** `[p. N]` use the PDF's printed page numbers, including inside paragraphs that
   cross a page break and for footnotes.
 
