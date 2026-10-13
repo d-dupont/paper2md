@@ -9,10 +9,13 @@ read each page's text with pdfium, which gives the lines in order with the line 
     18 after the date of the enactment of this Act, the
 
 We drop the line numbers, the page header ("12", "•S 3312 IS"), the stamps ("VerDate ...",
-"... PROD with BILLS" or "... PROD with $$_JOB") and the end-of-bill ornament, join accents printed after their letter ("LUJA´N" -> "LUJÁN", see
-accents.py), rejoin words broken at line ends, start a new paragraph at each
-section heading and each (a)/(1)/(A) paragraph, and add the usual [p. N] markers (inside a
-paragraph when it runs onto the next page).
+"... PROD with BILLS" or "... PROD with $$_JOB") and the end-of-bill ornament, join accents
+printed after their letter ("LUJA´N" -> "LUJÁN", see accents.py), rejoin words broken at line
+ends, start a new paragraph at each section heading and each (a)/(1)/(A) paragraph, and add the
+usual [p. N] markers (inside a paragraph when it runs onto the next page).
+
+Resolutions from the same printer mostly have no line numbers, so Docling reads them; its
+output still carries the stamps, one paragraph each, and drop_stamps() deletes those.
 
 Words broken at a line end: pdfium marks the break with U+FFFE. Whether the hyphen belongs to
 the word ("high-impact") or only marks the break ("Representa-tives") can't be told from the
@@ -30,12 +33,16 @@ from paper2md.accents import join_accents_after
 
 LINE_NUMBER = re.compile(r"^(\d{1,2}) (?=\S)")
 SOFT_BREAK = "￾"
+# Each pattern covers a whole stamp, start to end. Docling hands us paragraphs, not lines, and a
+# paragraph that merely starts with "VerDate" might hold real text after it.
 STAMPS = (
-    re.compile(r"^VerDate\b"),                       # "VerDate Sep 11 2014 01:21 Nov 22, 2023 Jkt ..."
-    re.compile(r"PROD with \S+$"),                 # "dmwilson on DSKJM0X7X2PROD with BILLS",
-                                                     # "kjohnson on DSK7ZCZBW3PROD with $$_JOB"
-    re.compile(r"^•\s*[A-Z][A-Z. ]*\d+\s+[A-Z]{2,4}$"),  # "•S 3312 IS", "•HR 815 EH"
-    re.compile(r"^Æ$"),                              # the end-of-bill ornament, read as "Æ"
+    # "VerDate Sep 11 2014 01:21 Nov 22, 2023 Jkt 049200 PO 00000 Frm 00011 Fmt 6652 Sfmt 6201
+    # E:\BILLS\S3312.IS S3312"
+    re.compile(r"VerDate .+ Jkt \S+ PO \S+ Frm \S+ Fmt \S+ Sfmt \S+ \S+ \S+"),
+    # "dmwilson on DSKJM0X7X2PROD with BILLS", "kjohnson on DSK7ZCZBW3PROD with $$_JOB"
+    re.compile(r"\S+ on \S+PROD with \S+"),
+    re.compile(r"•\s*[A-Z][A-Z. ]*\d+\s+[A-Z]{2,4}"),  # "•S 3312 IS", "•HR 815 EH"
+    re.compile(r"Æ"),                                    # the end-of-bill ornament, read as "Æ"
 )
 PAGE_HEADER = re.compile(r"^(?:\d+|[IVX]{1,4})$")    # the page number, or the cover's "II"
 HEADING = re.compile(r"^(?:SEC(?:TION)?\.? \d|TITLE [IVXLC]+\b|Subtitle [A-Z]\b|DIVISION [A-Z]\b)")
@@ -45,6 +52,22 @@ PARAGRAPH_START = re.compile(
 HYPHENATED = re.compile(r"\b[^\W\d_]+(?:-[^\W\d_]+)+\b")
 SHORT_TITLE = re.compile(r"may be cited as the [‘'\"“]{1,2}(.+?)[’'\"”]{1,2}", re.S)
 MIN_NUMBERED_LINES = 5  # a page with this many numbered lines counts as line-numbered
+
+
+def is_stamp(text: str) -> bool:
+    """Is `text` (a line, or a whole paragraph) nothing but a printing-office stamp?"""
+    return any(stamp.fullmatch(text.strip()) for stamp in STAMPS)
+
+
+def drop_stamps(doc) -> int:
+    """Delete the paragraphs of a Docling document that are only a stamp. Returns how many.
+
+    For GPO documents Docling reads (resolutions without line numbers); other PDFs have none.
+    """
+    stamps = [item for item in doc.texts if is_stamp(item.text)]
+    if stamps:
+        doc.delete_items(node_items=stamps)
+    return len(stamps)
 
 
 @dataclass
@@ -58,7 +81,7 @@ def page_lines(text: str) -> list[Line]:
     text = join_accents_after(text)
     text = text.replace(SOFT_BREAK, SOFT_BREAK + "\n")  # pdfium drops the line break after it
     raw = [line.strip() for line in re.split(r"\r\n|\r|\n", text)]
-    raw = [line for line in raw if line and not any(stamp.search(line) for stamp in STAMPS)]
+    raw = [line for line in raw if line and not is_stamp(line)]
     if raw and PAGE_HEADER.match(raw[0]):
         raw = raw[1:]
     lines, counter = [], 0

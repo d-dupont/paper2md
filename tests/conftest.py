@@ -28,18 +28,19 @@ def sample(arxiv_id: str) -> Path:
 
 
 BILL = "BILLS-118s3312is"  # S. 3312 (118th Congress), a line-numbered bill from GovInfo
+RESOLUTION = "BILLS-118hres684ih"  # H. Res. 684 (118th Congress): no line numbers, read by Docling
 
 
-def bill_sample() -> Path:
-    """samples/BILLS-118s3312is.pdf, downloaded from GovInfo the first time (skipped offline)."""
-    path = SAMPLES / f"{BILL}.pdf"
+def bill_sample(package: str = BILL) -> Path:
+    """samples/<package>.pdf, downloaded from GovInfo the first time (skipped offline)."""
+    path = SAMPLES / f"{package}.pdf"
     if not path.exists():
         SAMPLES.mkdir(exist_ok=True)
         try:
-            urllib.request.urlretrieve(f"https://www.govinfo.gov/content/pkg/{BILL}/pdf/{BILL}.pdf", path)
+            urllib.request.urlretrieve(f"https://www.govinfo.gov/content/pkg/{package}/pdf/{package}.pdf", path)
         except OSError as error:
             path.unlink(missing_ok=True)
-            pytest.skip(f"could not download the sample bill: {error}")
+            pytest.skip(f"could not download {package}: {error}")
     return path
 
 

@@ -203,6 +203,22 @@ def test_bill_sections_paragraphs_and_pages(bill):
     assert 'bill: "S. 3312, 118th Congress"' in bill
 
 
+def test_resolution_read_by_docling_has_no_stamps(tmp_path_factory):
+    # H. Res. 684 has no line numbers, so Docling reads it. Docling kept the printing office's
+    # stamps as paragraphs of their own, at the top and bottom of every page.
+    from conftest import RESOLUTION, bill_sample
+
+    out = tmp_path_factory.mktemp("resolution")
+    run([str(bill_sample(RESOLUTION)), "--out", str(out)])
+    text = (out / RESOLUTION / "paper.md").read_text(encoding="utf-8")
+    for stamp in ("VerDate", "PROD with", "Æ"):
+        assert stamp not in text
+    # Quotes copied from the PDF; the text around the stamps stays.
+    assert "Condemning the actions of Governor of New Mexico, Michelle Lujan Grisham" in text
+    assert "Whereas the Second Amendment to the Constitution states that the citizens right" in text
+    assert re.findall(r"\[p\. (\d+)\]", text) == ["1", "2", "3"]
+
+
 @pytest.mark.parametrize("paper", [RESNET, SAFETY, "1706.03762", "2001.08361", "1412.6980"])
 def test_papers_are_not_mistaken_for_bills(paper):
     from conftest import sample

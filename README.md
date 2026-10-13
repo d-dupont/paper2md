@@ -107,7 +107,8 @@ each `(a)`/`(1)`/`(A)` paragraph its own paragraph, and keeps the `[p. N]` marke
 information block names the bill (`S. 3312, 118th Congress`) and its short title. One thing
 can't be read off the page: whether a hyphen at a line end belongs to the word. It is kept when
 the hyphenated word appears unbroken elsewhere in the bill (`high-impact`), and dropped
-otherwise (`non-`/`government` → `nongovernment`).
+otherwise (`non-`/`government` → `nongovernment`). Resolutions from the same printer usually
+have no line numbers and go through the normal conversion; their stamps are removed there too.
 
 Before a `--formulas` run the tool prints how many equations it found and how long they will take;
 Ctrl+C stops it.

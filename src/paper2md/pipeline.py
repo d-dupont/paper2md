@@ -7,6 +7,7 @@ from pathlib import Path
 from docling_core.types.doc import DoclingDocument
 
 from paper2md.accents import fix_accents
+from paper2md.bills import drop_stamps
 from paper2md.convert import FORMULA_MODEL_STARTUP_SECONDS, SECONDS_PER_FORMULA, convert_pdf, count_item_types, write_markdown
 from paper2md.equations import save_equations
 from paper2md.figures import save_figures
@@ -41,6 +42,9 @@ def process(pdf: Path, paper_dir: Path, ocr: bool, formulas: bool, verbose: bool
     doc = convert_with_estimate(pdf, ocr=ocr, formulas=formulas)
 
     paper_dir.mkdir(parents=True, exist_ok=True)
+    # Printing-office stamps out first (GPO resolutions), so no step below takes one for text,
+    # e.g. a page marker landing on the stamp at the top of a page.
+    drop_stamps(doc)
     # Before anything else: the steps below depend on reading order and character positions.
     fix_reading_order(doc)
     names = page_names(pdf)

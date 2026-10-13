@@ -8,7 +8,8 @@ from docling_core.types.doc.labels import DocItemLabel
 
 from paper2md.accents import join_accents, join_accents_after
 from paper2md.arxiv import folder_name, parse_arxiv_id
-from paper2md.bills import bill_blocks, bill_markdown, bill_number, bill_title, is_line_numbered, page_lines
+from paper2md.bills import (bill_blocks, bill_markdown, bill_number, bill_title, drop_stamps, is_line_numbered,
+                            is_stamp, page_lines)
 from paper2md.cli import build_parser, run
 from paper2md.convert import drop_invented_list_numbers, performance_cores
 from paper2md.figures import find_caption
@@ -376,6 +377,30 @@ def test_bill_end_mark_and_every_stamp_form_are_dropped():
     lines = [line.text for line in page_lines(BILL_LAST_PAGE)]
     assert lines[-1] == "United States Virgin Islands.’’."  # the bill's last words end the page
     assert not any("Æ" in line or "PROD with" in line or "VerDate" in line for line in lines)
+
+
+HRES_684_STAMP = ("VerDate Sep 11 2014 22:13 Oct 05, 2023 Jkt 049200 PO 00000 Frm 00001 Fmt 6652 "
+                  "Sfmt 6652 E:\\BILLS\\HR684.IH HR684")
+
+
+def test_a_paragraph_is_a_stamp_only_if_all_of_it_is_one():
+    # Whole stamps, as Docling gives them for H. Res. 684 (118th Congress):
+    assert is_stamp(HRES_684_STAMP)
+    assert is_stamp("kjohnson on DSK7ZCZBW3PROD with $$_JOB")
+    assert is_stamp("•HR 684 IH") and is_stamp("Æ")
+    # A stamp merged with real text is not one: deleting it would delete the text too.
+    assert not is_stamp(HRES_684_STAMP + " Whereas the Second Amendment to the Constitution")
+    assert not is_stamp("The Senate shall consider the stamp PROD with BILLS")
+    assert not is_stamp("ÆSIR")
+
+
+def test_drop_stamps_deletes_only_the_stamp_paragraphs():
+    doc = DoclingDocument(name="test")
+    for text in ("kjohnson on DSK7ZCZBW3PROD with $$_JOB", "Whereas the Second Amendment states;",
+                 HRES_684_STAMP, "Æ"):
+        doc.add_text(label=DocItemLabel.TEXT, text=text)
+    assert drop_stamps(doc) == 3
+    assert [item.text for item in doc.texts] == ["Whereas the Second Amendment states;"]
 
 
 def test_bill_paragraphs_hyphens_and_page_markers():
