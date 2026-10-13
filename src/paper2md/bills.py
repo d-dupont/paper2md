@@ -46,8 +46,10 @@ STAMPS = (
 )
 PAGE_HEADER = re.compile(r"^(?:\d+|[IVX]{1,4})$")    # the page number, or the cover's "II"
 HEADING = re.compile(r"^(?:SEC(?:TION)?\.? \d|TITLE [IVXLC]+\b|Subtitle [A-Z]\b|DIVISION [A-Z]\b)")
+# A label is up to 5 letters ("(iv)", "(aa)") or up to 3 digits ("(405)"): a line that wraps to
+# start with a year, "(2008), the Supreme Court ...", is not a new paragraph.
 PARAGRAPH_START = re.compile(
-    r"^(?:[‘'\"“]{0,2}\([A-Za-z0-9]{1,5}\)|SEC(?:TION)?\.? \d|Sec\. \d|TITLE [IVXLC]+\b|"
+    r"^(?:[‘'\"“]{0,2}\((?:[A-Za-z]{1,5}|\d{1,3})\)|SEC(?:TION)?\.? \d|Sec\. \d|TITLE [IVXLC]+\b|"
     r"Subtitle [A-Z]\b|DIVISION [A-Z]\b|Be it enacted)")
 HYPHENATED = re.compile(r"\b[^\W\d_]+(?:-[^\W\d_]+)+\b")
 SHORT_TITLE = re.compile(r"may be cited as the [‘'\"“]{1,2}(.+?)[’'\"”]{1,2}", re.S)
@@ -165,6 +167,7 @@ def bill_blocks(pages: list[list[Line]], names: dict[int, str]) -> list[Block]:
             blocks.append(current)
         if pending:  # a page with no text
             blocks.append(Block(pending, marker=True))
+            current = None  # nothing continues across it: text after the marker is new
     for block in blocks:
         block.text = block.text.replace(SOFT_BREAK, "-")
     return blocks

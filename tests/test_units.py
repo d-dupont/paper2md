@@ -417,6 +417,25 @@ def test_bill_paragraphs_hyphens_and_page_markers():
     assert "\n\n## SEC. 202. GENERATIVE ARTIFICIAL INTELLIGENCE TRANSPARENCY.\n\n(a) IN GENERAL." in text
 
 
+def test_a_year_in_brackets_starting_a_line_is_not_a_paragraph_label():
+    # H. Res. 684: the case citation wraps so that a line starts with "(2008)".
+    pages = [page_lines("1 Whereas in District of Columbia v. Heller, 554 U.S. 570, 595 \r\n"
+                        "2 (2008), the Supreme Court confirmed that the right \r\n"
+                        "3 (1) is individual. \r\n")]
+    text = bill_markdown(bill_blocks(pages, {1: "2"}))
+    assert "554 U.S. 570, 595 (2008), the Supreme Court confirmed" in text
+    assert "\n\n(1) is individual." in text  # a real label still starts a paragraph
+
+
+def test_text_after_a_blank_page_does_not_join_the_paragraph_before_it():
+    # S. Con. Res. 7 (reported): page 11 is blank, page 12 is the back cover.
+    pages = [page_lines("1 (5) calls on the President to work for \r\n2 a free Russia. \r\n"),
+             [],
+             page_lines("Calendar No. 52 \r\n118TH CONGRESS \r\n")]
+    text = bill_markdown(bill_blocks(pages, {1: "10", 2: "11", 3: "12"}))
+    assert "a free Russia.\n\n[p. 11]\n\n[p. 12]\n\nCalendar No. 52" in text
+
+
 def test_bill_detection_title_and_number():
     pages = [page_lines(BILL_PAGE_1), page_lines(BILL_PAGE_2)]
     assert is_line_numbered(pages[:1])
