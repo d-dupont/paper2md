@@ -16,7 +16,7 @@ from paper2md.layout import Box
 from paper2md.metadata import arxiv_id_for, front_matter, parse_arxiv_entry
 from paper2md.reading_order import Entry, column_order
 from paper2md.row_groups import find_groups
-from paper2md.pages import mark_page_breaks_inside_text, page_name
+from paper2md.pages import mark_page_breaks_inside_text, page_name, printed_page_offset
 from paper2md.superscripts import Run, locate, mark, normalize
 from paper2md.tables import caption_candidates, column_names, nearest_caption, table_number
 
@@ -363,3 +363,16 @@ def test_bill_detection_title_and_number():
                        "4 This Act may be cited as the ‘‘Frontier \r\n5 AI Act of 2023’’. \r\n")
     assert bill_number([cover]) == "S. 3312, 118th Congress"
     assert bill_title(bill_blocks([cover], {1: "1"})) == "Frontier AI Act of 2023"
+
+
+def test_printed_page_numbers_found_in_headers_when_the_pdf_has_no_labels():
+    # Federal Register: the first page has the number on its own line, later ones in the header.
+    federal_register = ["Presidential Documents\n75191 \nFederal Register \nVol. 88, No. 210",
+                        "75192 Federal Register / Vol. 88, No. 210 / Wednesday, November 1, 2023\ntext",
+                        "75193 Federal Register / Vol. 88, No. 210 / Wednesday, November 1, 2023\ntext"]
+    assert printed_page_offset(federal_register) == 75190
+    # A footer "2", "3" ... from the second page on: same as the positions.
+    assert printed_page_offset(["Title\ntext", "text\n2", "text\n3", "text\n4"]) == 0
+    # The same year on every page is not a page number.
+    assert printed_page_offset(["Report 2023\ntext", "Report 2023\ntext", "Report 2023\ntext"]) is None
+    assert printed_page_offset(["no numbers", "here"]) is None

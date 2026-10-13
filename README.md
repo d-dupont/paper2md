@@ -81,6 +81,11 @@ uv sync
 
 The first conversion downloads Docling's layout models (about 1 GB, once).
 
+Page markers use the page number printed on the page: the PDF's own page labels if it has them,
+otherwise the numbers in its headers or footers when they run consistently (the Federal Register's
+75191, 75192, …). When that differs from the page's position in the file, both are given:
+`[p. 75196 | pdf 6]`.
+
 ## Usage
 
 ```bash
