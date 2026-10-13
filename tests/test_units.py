@@ -8,8 +8,8 @@ from docling_core.types.doc.labels import DocItemLabel
 
 from paper2md.accents import join_accents, join_accents_after
 from paper2md.arxiv import folder_name, parse_arxiv_id
-from paper2md.bills import (bill_blocks, bill_markdown, bill_number, bill_title, drop_stamps, is_line_numbered,
-                            is_stamp, page_lines)
+from paper2md.bills import (Char, bill_blocks, bill_markdown, bill_number, bill_title, drop_stamps,
+                            is_line_numbered, is_stamp, page_lines, turned_lines)
 from paper2md.cli import build_parser, run
 from paper2md.convert import drop_invented_list_numbers, performance_cores
 from paper2md.figures import find_caption
@@ -434,6 +434,20 @@ def test_text_after_a_blank_page_does_not_join_the_paragraph_before_it():
              page_lines("Calendar No. 52 \r\n118TH CONGRESS \r\n")]
     text = bill_markdown(bill_blocks(pages, {1: "10", 2: "11", 3: "12"}))
     assert "a free Russia.\n\n[p. 11]\n\n[p. 12]\n\nCalendar No. 52" in text
+
+
+def turned(word: str, start: float, across: float) -> list[Char]:
+    """`word` as characters of a turned line: 5 points per letter, font 10 points high."""
+    return [Char(c, 90, start + 5 * k, start + 5 * (k + 1), across, 10.0) for k, c in enumerate(word)]
+
+
+def test_turned_lines_follow_the_text_not_the_page():
+    # Lines handed over out of order (pdfium's order on a turned page is scrambled).
+    chars = turned("tion", 0, 20) + turned("Condemning", 0, 8) + turned("deten-", 55, 8)
+    assert turned_lines(chars) == ["Condemning deten￾", "tion"]  # the break is marked
+    # A hyphen after a digit stays: "180-day".
+    assert turned_lines(turned("within", 0, 8) + turned("180-", 35, 8) + turned("day", 0, 20)) == [
+        "within 180-", "day"]
 
 
 def test_bill_detection_title_and_number():

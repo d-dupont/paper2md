@@ -21,13 +21,20 @@ Words broken at a line end: pdfium marks the break with U+FFFE. Whether the hyph
 the word ("high-impact") or only marks the break ("Representa-tives") can't be told from the
 page, so the hyphen is kept when the hyphenated form appears unbroken elsewhere in the bill.
 A plain "-" at a line end ("180-" / "day") is always part of the word.
+
+The back cover of a reported or passed version is printed turned 90 degrees. pdfium assembles
+lines across the page, which slices through the turned lines and mixes their words up, so a page
+whose text is mostly turned is rebuilt from its characters' positions (page_text()).
 """
 
+import math
 import re
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
 import pypdfium2
+import pypdfium2.raw as pdfium_c
 
 from paper2md.accents import join_accents_after
 
@@ -108,9 +115,81 @@ def is_line_numbered(pages: list[list[Line]]) -> bool:
 def read_pages(pdf: Path) -> list[list[Line]]:
     document = pypdfium2.PdfDocument(pdf)
     try:
-        return [page_lines(document[i].get_textpage().get_text_range()) for i in range(len(document))]
+        return [page_lines(page_text(document[i])) for i in range(len(document))]
     finally:
         document.close()
+
+
+@dataclass
+class Char:
+    """A character placed in its own line's frame, whichever way the page prints it."""
+    text: str
+    angle: int     # 0, 90, 180 or 270: how far the text is turned, clockwise
+    start: float   # where it starts and ends along its line, in reading direction
+    end: float
+    across: float  # its middle across the lines: larger is a later line
+    size: float    # the font's height
+
+
+def page_text(page) -> str:
+    """A page's text, line by line. Mostly-turned pages are rebuilt from character positions."""
+    textpage = page.get_textpage()
+    # Decide on every 7th character first: placing them all costs ten times the plain reading.
+    sample = [_angle(textpage, i) for i in range(0, textpage.count_chars(), 7)
+              if textpage.get_text_range(i, 1).strip()]
+    if not sample or sample.count(0) * 2 >= len(sample):
+        return textpage.get_text_range()
+    chars = _chars(textpage)
+    angles = Counter(char.angle for char in chars)
+    lines = []
+    for angle, _count in angles.most_common():  # the turned text first, then e.g. the stamps
+        lines += turned_lines([char for char in chars if char.angle == angle])
+    return "\r\n".join(lines)
+
+
+def _angle(textpage, i: int) -> int:
+    return round(math.degrees(pdfium_c.FPDFText_GetCharAngle(textpage.raw, i)) / 90) % 4 * 90
+
+
+def _chars(textpage) -> list[Char]:
+    chars = []
+    for i in range(textpage.count_chars()):
+        text = textpage.get_text_range(i, 1)
+        if not text.strip():  # pdfium's own spaces and line breaks: rebuilt from the gaps
+            continue
+        angle = _angle(textpage, i)
+        sin, cos = math.sin(math.radians(angle)), math.cos(math.radians(angle))
+        # The loose box spans the font's full height, the same for every letter of a line; a
+        # tight box is taller for "l" than for "a", which would split the line.
+        left, bottom, right, top = textpage.get_charbox(i, loose=True)
+        along = [x * cos - y * sin for x in (left, right) for y in (bottom, top)]
+        across = [-x * sin - y * cos for x in (left, right) for y in (bottom, top)]
+        chars.append(Char(text, angle, min(along), max(along), sum(across) / 4, max(across) - min(across)))
+    return chars
+
+
+def turned_lines(chars: list[Char]) -> list[str]:
+    """Characters of one angle -> their lines in reading order, with spaces where the gaps are."""
+    groups: list[list[Char]] = []
+    for char in sorted(chars, key=lambda c: c.across):
+        first = groups[-1][0] if groups else None
+        if first and abs(char.across - first.across) <= 0.5 * min(char.size, first.size):
+            groups[-1].append(char)
+        else:
+            groups.append([char])
+    lines = []
+    for group in groups:
+        group.sort(key=lambda c: c.start)
+        text = group[0].text
+        for before, char in zip(group, group[1:]):
+            text += (" " if char.start - before.end > 0.15 * min(char.size, before.size) else "") + char.text
+        lines.append(text)
+    # pdfium marks a word broken at a line end with U+FFFE on upright pages, not always on turned
+    # ones ("democ-" / "racy"): a hyphen after a letter, before a lowercase line, is such a break.
+    for k in range(len(lines) - 1):
+        if len(lines[k]) > 1 and lines[k][-1] == "-" and lines[k][-2].isalpha() and lines[k + 1][:1].islower():
+            lines[k] = lines[k][:-1] + SOFT_BREAK
+    return lines
 
 
 def _join(left: str, right: str, hyphenated: set[str]) -> str:

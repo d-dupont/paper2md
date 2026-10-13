@@ -203,6 +203,22 @@ def test_bill_sections_paragraphs_and_pages(bill):
     assert 'bill: "S. 3312, 118th Congress"' in bill
 
 
+def test_turned_back_cover_reads_line_by_line():
+    # S. Con. Res. 7 (reported, 118th Congress): its back cover is printed turned 90 degrees.
+    from conftest import bill_sample
+    from paper2md.bills import read_pages
+
+    cover = [line.text for line in read_pages(bill_sample("BILLS-118sconres7rs"))[-1]]
+    assert cover[:4] == ["Calendar No. 52", "118TH CONGRESS", "1ST SESSION S. CON. RES. 7", "CONCURRENT RESOLUTION"]
+    # The title is what came out scrambled ("... arbitrary detenin Russia. racy, the rule ...").
+    assert cover[4:9] == ["Condemning Russia’s unjust and arbitrary deten￾",
+                          "tion of Russian opposition leader Vladimir Kara￾",
+                          "Murza who has stood up in defense of democ￾",
+                          "racy, the rule of law, and free and fair elections",
+                          "in Russia."]
+    assert cover[-2:] == ["Reported with an amendment and an amendment to the", "preamble"]
+
+
 def test_resolution_read_by_docling_has_no_stamps(tmp_path_factory):
     # H. Res. 684 has no line numbers, so Docling reads it. Docling kept the printing office's
     # stamps as paragraphs of their own, at the top and bottom of every page.
