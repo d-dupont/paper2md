@@ -9,7 +9,7 @@ from docling_core.types.doc.labels import DocItemLabel
 from paper2md.accents import join_accents, join_accents_after
 from paper2md.arxiv import folder_name, parse_arxiv_id
 from paper2md.bills import (Char, bill_blocks, bill_markdown, bill_number, bill_title, drop_stamps,
-                            is_line_numbered, is_stamp, page_lines, turned_lines)
+                            is_gpo_measure, is_line_numbered, is_stamp, page_lines, turned_lines)
 from paper2md.cli import build_parser, run
 from paper2md.convert import drop_invented_list_numbers, performance_cores
 from paper2md.figures import find_caption
@@ -448,6 +448,61 @@ def test_turned_lines_follow_the_text_not_the_page():
     # A hyphen after a digit stays: "180-day".
     assert turned_lines(turned("within", 0, 8) + turned("180-", 35, 8) + turned("day", 0, 20)) == [
         "within 180-", "day"]
+
+
+COVER_684 = "118TH CONGRESS \r\n1ST SESSION H. RES. 684 \r\nCondemning the actions of Governor of New Mexico \r\n"
+
+
+def test_gpo_bills_and_resolutions_are_recognized_by_cover_and_printing_marks():
+    assert is_gpo_measure([COVER_684, "2 \r\n•HRES 684 IH\r\nWhereas, on September 8, 2023 \r\n"])
+    assert is_gpo_measure([COVER_684, "Whereas ... \r\n" + HRES_684_STAMP])
+    assert is_gpo_measure([COVER_684, "3 \r\nSRES 99 RS1S \r\nflict’’, and there are"])  # header, no bullet
+    # The cover alone, or the marks alone, are not enough.
+    assert not is_gpo_measure([COVER_684, "2 \r\nWhereas nothing printed here marks it"])
+    assert not is_gpo_measure(["Abstract \r\nWe study 3 models.", "2 \r\n•HRES 684 IH\r\ntext"])
+    # The Federal Register has the same kind of stamp, naming E:\FR\, and no such cover.
+    assert not is_gpo_measure(["Presidential Documents \r\n75191 \r\nVerDate Sep 11 2014 18:29 Oct 31, 2023 "
+                               "Jkt 262001 PO 00000 Frm 00001 Fmt 4705 Sfmt 4790 E:\\FR\\FM\\01NOD0.SGM 01NOD0"])
+
+
+# A concurrent resolution, abridged from S. Con. Res. 7 (118th Congress): no line numbers until the
+# Resolved clause, and the end of a passed version.
+RESOLUTION_PAGE = (
+    "118TH CONGRESS \r\n1ST SESSION S. CON. RES. 7 \r\nCONCURRENT RESOLUTION \r\n"
+    "Condemning Russia’s unjust and arbitrary deten\ufffetion of Vladimir Kara-Murza. \r\n"
+    "Whereas Vladimir Kara-Murza is a Russian opposition \r\n"
+    "leader; and \r\n"
+    "Whereas he remains in detention: Now, therefore, be it \r\n"
+    "1 Resolved by the Senate (the House of Representatives \r\n"
+    "2 concurring), That Congress condemns his detention. \r\n"
+    "Passed the Senate May 4, 2023. \r\nAttest: \r\nSecretary. \r\n"
+)
+
+
+def test_resolution_clauses_title_and_number():
+    pages = [page_lines(RESOLUTION_PAGE)]
+    blocks = bill_blocks(pages, {1: "1"})
+    text = bill_markdown(blocks)
+    assert ("\n\nWhereas Vladimir Kara-Murza is a Russian opposition leader; and\n\n"
+            "Whereas he remains in detention: Now, therefore, be it\n\n"
+            "Resolved by the Senate (the House of Representatives concurring), That Congress condemns his detention."
+            "\n\nPassed the Senate May 4, 2023.\n\nAttest: Secretary.\n") in text
+    assert bill_number(pages) == "S. Con. Res. 7, 118th Congress"
+    # No short title ("may be cited as"): the official title after "CONCURRENT RESOLUTION".
+    assert bill_title(blocks) == "Condemning Russia’s unjust and arbitrary detention of Vladimir Kara-Murza."
+    # A passed version can lack the title on its front; the back cover repeats it.
+    passed = page_lines("CONCURRENT RESOLUTION \r\nWhereas socialism has failed; \r\n"
+                        "CONCURRENT RESOLUTION \r\nDenouncing the horrors of socialism. \r\n")
+    assert bill_title(bill_blocks([passed], {1: "1"})) == "Denouncing the horrors of socialism."
+
+
+@pytest.mark.parametrize("cover, number", [
+    ("1ST SESSION H. R. 8812", "H.R. 8812"), ("1ST SESSION S. 3312", "S. 3312"),
+    ("1ST SESSION H. RES. 684", "H. Res. 684"), ("H. Res. 999 In the House of Representatives", "H. Res. 999"),
+    ("1ST SESSION H. CON. RES. 9", "H. Con. Res. 9"), ("1ST SESSION S. J. RES. 3", "S.J. Res. 3"),
+])
+def test_measure_numbers_in_citation_form(cover, number):
+    assert bill_number([page_lines(cover)]) == number
 
 
 def test_bill_detection_title_and_number():

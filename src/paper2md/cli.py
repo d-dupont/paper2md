@@ -51,8 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--bill",
         action=argparse.BooleanOptionalAction,
         default=None,
-        help="treat the PDF as a line-numbered bill (default: detected automatically); "
-        "--no-bill forces the normal conversion",
+        help="treat the PDF as a congressional bill or resolution printed by the GPO (default: "
+        "detected automatically); --no-bill forces the normal conversion",
     )
     parser.add_argument(
         "--verbose",
@@ -109,13 +109,15 @@ def run(argv: list[str] | None = None) -> None:
     if pdf.suffix.lower() != ".pdf":
         parser.error(f"not a .pdf file: {pdf}")
 
-    # Congressional bills: margin line numbers on most pages. Read them without Docling.
-    from paper2md.bills import is_line_numbered, process_bill, read_pages
+    # Congressional bills and resolutions as the GPO prints them: margin line numbers on most
+    # pages, or the GPO's cover and printing marks. Read them without Docling.
+    from paper2md.bills import is_gpo_measure, is_line_numbered, page_lines, page_texts, process_bill
 
     if args.bill is not False:
-        pages = read_pages(pdf)
-        if args.bill or is_line_numbered(pages):
-            print(f"Converting {pdf} (line-numbered bill) ...")
+        texts = page_texts(pdf)
+        pages = [page_lines(text) for text in texts]
+        if args.bill or is_line_numbered(pages) or is_gpo_measure(texts):
+            print(f"Converting {pdf} (bill or resolution) ...")
             process_bill(pdf, args.out / pdf.stem, pages)
             return
 

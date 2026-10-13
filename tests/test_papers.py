@@ -219,20 +219,40 @@ def test_turned_back_cover_reads_line_by_line():
     assert cover[-2:] == ["Reported with an amendment and an amendment to the", "preamble"]
 
 
-def test_resolution_read_by_docling_has_no_stamps(tmp_path_factory):
-    # H. Res. 684 has no line numbers, so Docling reads it. Docling kept the printing office's
-    # stamps as paragraphs of their own, at the top and bottom of every page.
-    from conftest import RESOLUTION, bill_sample
+def convert_resolution(tmp_path_factory, package: str) -> str:
+    from conftest import bill_sample
 
-    out = tmp_path_factory.mktemp("resolution")
-    run([str(bill_sample(RESOLUTION)), "--out", str(out)])
-    text = (out / RESOLUTION / "paper.md").read_text(encoding="utf-8")
-    for stamp in ("VerDate", "PROD with", "Æ"):
+    out = tmp_path_factory.mktemp(package)
+    run([str(bill_sample(package)), "--out", str(out)])
+    return (out / package / "paper.md").read_text(encoding="utf-8")
+
+
+def test_resolution_is_read_as_printed(tmp_path_factory):
+    # H. Res. 684 numbers only the lines of its Resolved clause, so it used to go to Docling,
+    # which kept those numbers ("con1", "demns ... 2"), split "self-defense" at the page break
+    # into two list items, and titled it "1ST SESSION H. RES. 684".
+    from conftest import RESOLUTION
+
+    text = convert_resolution(tmp_path_factory, RESOLUTION)
+    for stamp in ("VerDate", "PROD with", "Æ", "HRES 684 IH"):
         assert stamp not in text
-    # Quotes copied from the PDF; the text around the stamps stays.
-    assert "Condemning the actions of Governor of New Mexico, Michelle Lujan Grisham" in text
-    assert "Whereas the Second Amendment to the Constitution states that the citizens right" in text
+    assert 'title: "Condemning the actions of Governor of New Mexico, Michelle Lujan Grisham, for' in text
+    assert 'bill: "H. Res. 684, 118th Congress"' in text
+    # Quotes copied from the PDF: each clause its own paragraph, the page break inside one.
+    assert "\n\nWhereas the Second Amendment to the Constitution states that the citizens right to bear arms " \
+           "shall not be infringed;\n\n" in text
+    assert "the Supreme Court reaffirmed that ‘‘[s]elf-defense [p. 3] is a basic right" in text
+    assert "\n\nResolved, That the House of Representatives condemns the actions of Governor Michelle Lujan " in text
     assert re.findall(r"\[p\. (\d+)\]", text) == ["1", "2", "3"]
+
+
+def test_reported_resolution_keeps_its_pages_in_order(tmp_path_factory):
+    # S. Con. Res. 7 (reported): Docling put page 10's text under the marker for page 8.
+    text = convert_resolution(tmp_path_factory, "BILLS-118sconres7rs")
+    assert "Mr. Kara-Murza’s defiant stance in [p. 10] front of the Arizona House of Representatives" in text
+    assert re.findall(r"\[p\. (\d+)\]", text) == [str(n) for n in range(1, 13)]
+    assert "has worked to further.\n\n[p. 11]\n\n[p. 12]\n\nCalendar No. 52\n\n" in text  # 11 is blank
+    assert 'bill: "S. Con. Res. 7, 118th Congress"' in text
 
 
 @pytest.mark.parametrize("paper", [RESNET, SAFETY, "1706.03762", "2001.08361", "1412.6980"])
