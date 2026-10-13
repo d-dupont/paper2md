@@ -86,8 +86,7 @@ repeat a definition word for word in several titles, so find the section before 
 - **Bills:** the margin line numbers are removed, so a "page 12, line 4" reference (common in
   amendments) can't be found in `paper.md`; check the PDF. A hyphen at a line end is kept only if
   the hyphenated word appears unbroken elsewhere in the bill, so a rare compound can lose its
-  hyphen (`non-`/`government` → `nongovernment`). Accented names on the cover can come out split
-  (`LUJA´N` for Luján).
+  hyphen (`non-`/`government` → `nongovernment`).
 
 If something looks wrong in the conversion (missing section, figure with the wrong caption),
 tell the user: it's how the tool gets improved.

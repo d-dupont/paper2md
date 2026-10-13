@@ -1,8 +1,12 @@
-"""Joins accents that LaTeX-made PDFs store as separate characters: "M¨uller" -> "Müller".
+"""Joins accents that PDFs store as separate characters: "M¨uller" -> "Müller".
 
 LaTeX draws an accent as its own glyph placed over the letter, so the text layer holds a
 spacing accent followed by the letter. We replace it with the matching combining accent
 after the letter and let Unicode NFC merge the pair ("e" + U+0301 -> "é") where it can.
+
+Congressional bills (GPO) do the same with the opposite order: the accent comes after its
+letter ("LUJA´N", "Don˜a", "Rı´o"). On 13 bills, every one of 42 such accents sat over the
+letter before it on the page, so bills use join_accents_after() instead.
 """
 
 import re
@@ -41,6 +45,19 @@ def join_accents(text: str) -> str:
         return unicodedata.normalize("NFC", UNDOTTED.get(letter, letter) + COMBINING[accent])
 
     return SPACING_ACCENT.sub(combine, text)
+
+
+# A letter followed directly by its accent. The backtick is left out: bills quote with ‘‘ ’’.
+ACCENT_AFTER = re.compile(rf"({LETTER})([´¨ˆ˜¯˘˙˚˝ˇ¸])")
+
+
+def join_accents_after(text: str) -> str:
+    """Join accents stored after their letter, as in bills: "LUJA´N" -> "LUJÁN"."""
+    def combine(match: re.Match) -> str:
+        letter, accent = match.groups()
+        return unicodedata.normalize("NFC", UNDOTTED.get(letter, letter) + COMBINING[accent])
+
+    return ACCENT_AFTER.sub(combine, text)
 
 
 def fix_accents(doc: DoclingDocument) -> int:

@@ -191,6 +191,7 @@ def test_bill_text_has_no_line_numbers_headers_or_stamps(bill):
     assert "Artificial Intelligence Research, Innovation, and Accountability Act of 2023" in bill
     assert "high-impact artificial intelligence systems" in bill  # hyphen kept: it's part of the word
     assert "House of Representatives of the United States" in bill  # hyphen dropped: a line break
+    assert "Mr. LUJÁN" in bill  # the PDF prints the accent after its letter: "LUJA´N"
 
 
 def test_bill_sections_paragraphs_and_pages(bill):

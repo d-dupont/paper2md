@@ -9,7 +9,8 @@ read each page's text with pdfium, which gives the lines in order with the line 
     18 after the date of the enactment of this Act, the
 
 We drop the line numbers, the page header ("12", "•S 3312 IS") and the stamps ("VerDate ...",
-"... PROD with BILLS"), rejoin words broken at line ends, start a new paragraph at each
+"... PROD with BILLS"), join accents printed after their letter ("LUJA´N" -> "LUJÁN", see
+accents.py), rejoin words broken at line ends, start a new paragraph at each
 section heading and each (a)/(1)/(A) paragraph, and add the usual [p. N] markers (inside a
 paragraph when it runs onto the next page).
 
@@ -24,6 +25,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pypdfium2
+
+from paper2md.accents import join_accents_after
 
 LINE_NUMBER = re.compile(r"^(\d{1,2}) (?=\S)")
 SOFT_BREAK = "￾"
@@ -50,6 +53,7 @@ class Line:
 
 def page_lines(text: str) -> list[Line]:
     """One page's text from pdfium -> its lines, without header, stamps and line numbers."""
+    text = join_accents_after(text)
     text = text.replace(SOFT_BREAK, SOFT_BREAK + "\n")  # pdfium drops the line break after it
     raw = [line.strip() for line in re.split(r"\r\n|\r|\n", text)]
     raw = [line for line in raw if line and not any(stamp.search(line) for stamp in STAMPS)]

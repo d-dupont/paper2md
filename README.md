@@ -101,7 +101,8 @@ uv run paper2md doc.pdf --bill / --no-bill   # force or switch off bill mode
 **Bills.** Congressional bills printed by the GPO have line numbers (1–25) in the margin, which
 a layout model mixes into the words (`non8 government`). When most pages carry such numbers,
 paper2md reads the text directly from the PDF instead: it drops the line numbers, page headers
-and printing-office stamps, rejoins words broken at line ends, gives each `SEC.` heading and
+and printing-office stamps, joins accents the GPO prints after their letter (`LUJA´N` → `LUJÁN`),
+rejoins words broken at line ends, gives each `SEC.` heading and
 each `(a)`/`(1)`/`(A)` paragraph its own paragraph, and keeps the `[p. N]` markers. The
 information block names the bill (`S. 3312, 118th Congress`) and its short title. One thing
 can't be read off the page: whether a hyphen at a line end belongs to the word. It is kept when

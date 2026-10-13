@@ -6,7 +6,7 @@ import pytest
 from docling_core.types.doc import BoundingBox, CoordOrigin, DoclingDocument, ProvenanceItem, Size
 from docling_core.types.doc.labels import DocItemLabel
 
-from paper2md.accents import join_accents
+from paper2md.accents import join_accents, join_accents_after
 from paper2md.arxiv import folder_name, parse_arxiv_id
 from paper2md.bills import bill_blocks, bill_markdown, bill_number, bill_title, is_line_numbered, page_lines
 from paper2md.cli import build_parser, run
@@ -186,6 +186,20 @@ def test_accents_are_joined_to_their_letter(broken, fixed):
     assert join_accents(broken) == fixed
 
 
+# Bills print the accent after its letter. All from GovInfo PDFs (118th Congress).
+@pytest.mark.parametrize("broken, fixed", [
+    ("Mr. LUJA´N", "Mr. LUJÁN"),  # S. 3312: on "A", not "N" (join_accents would say LUJAŃ)
+    ("Ms. VELA´ZQUEZ", "Ms. VELÁZQUEZ"),
+    ("Don˜a Ana County", "Doña Ana County"),  # lowercase, tilde
+    ("Rı´o Grande", "Río Grande"),  # accent on a dotless i
+    ("HANAPE¯PE¯ RIVER", "HANAPĒPĒ RIVER"),  # macron, twice in a word
+    ("Honoko¯wai", "Honokōwai"),
+    ("a plain sentence.", "a plain sentence."),
+])
+def test_bill_accents_are_joined_to_the_letter_before(broken, fixed):
+    assert join_accents_after(broken) == fixed
+
+
 # --- row groups in tables -------------------------------------------------------------------
 
 def test_group_label_spans_the_rows_between_two_lines():
@@ -339,6 +353,8 @@ def test_bill_page_lines_drop_numbers_header_and_stamps():
     assert not any("VerDate" in line.text or "PROD with" in line.text for line in lines)
     # A line starting with a number keeps it: only the line number goes.
     assert page_lines("1 500 employees; \r\n2 and")[0].text == "500 employees;"
+    # Accents printed after their letter are joined to it.
+    assert page_lines("1 Mr. WICKER, Mr. LUJA´N, and \r\n")[0].text == "Mr. WICKER, Mr. LUJÁN, and"
 
 
 def test_bill_paragraphs_hyphens_and_page_markers():
