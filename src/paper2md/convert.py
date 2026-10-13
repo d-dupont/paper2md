@@ -1,6 +1,7 @@
 """Runs Docling on a PDF and writes the result as Markdown."""
 
 import os
+import re
 import subprocess
 from collections import Counter
 from pathlib import Path
@@ -56,8 +57,20 @@ def write_markdown(doc: DoclingDocument, paper_dir: Path, header: str = "") -> P
     markdown = doc.export_to_markdown(
         image_mode=ImageRefMode.REFERENCED, escape_underscores=False, escape_html=False
     )
-    path.write_text(header + markdown, encoding="utf-8")
+    path.write_text(header + drop_invented_list_numbers(markdown), encoding="utf-8")
     return path
+
+
+# Docling numbers the items of a list it thinks is ordered ("2.", "3.", ...), even when each item
+# already carries its own label: the EU AI Act's "(a) the placing on the market ..." came out as
+# "2. (a) the placing ...". The "2." isn't in the PDF, and it would be read as paragraph 2. Such
+# a number is dropped when the item's text starts with its own label: (a), (ii), (B), (1), and the
+# Official Journal's footnote labels "( 57 )" and "(*)".
+INVENTED_NUMBER = re.compile(r"(?m)^(\s*)\d{1,3}\.[ \t]+(?=\(\s?(?:[a-zA-Z]{1,4}|\d{1,3}|\*)\s?\)\s)")
+
+
+def drop_invented_list_numbers(markdown: str) -> str:
+    return INVENTED_NUMBER.sub(r"\1- ", markdown)
 
 
 def count_item_types(doc: DoclingDocument) -> Counter:

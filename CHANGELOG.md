@@ -2,6 +2,13 @@
 
 What changed in each version, newest first.
 
+## 0.3.1 (2026-10-12)
+
+### Fixed
+- List numbers Docling invents in front of an item's own label are dropped: the EU AI Act's
+  "(a) the placing on the market ..." no longer comes out as "2. (a) the placing ...", which
+  read as paragraph 2. Checked on the AI Act (Regulation (EU) 2024/1689, 144 pages).
+
 ## 0.3.0 (2026-10-12)
 
 ### New

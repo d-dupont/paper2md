@@ -10,7 +10,7 @@ from paper2md.accents import join_accents
 from paper2md.arxiv import folder_name, parse_arxiv_id
 from paper2md.bills import bill_blocks, bill_markdown, bill_number, bill_title, is_line_numbered, page_lines
 from paper2md.cli import build_parser, run
-from paper2md.convert import performance_cores
+from paper2md.convert import drop_invented_list_numbers, performance_cores
 from paper2md.figures import find_caption
 from paper2md.layout import Box
 from paper2md.metadata import arxiv_id_for, front_matter, parse_arxiv_entry
@@ -376,3 +376,15 @@ def test_printed_page_numbers_found_in_headers_when_the_pdf_has_no_labels():
     # The same year on every page is not a page number.
     assert printed_page_offset(["Report 2023\ntext", "Report 2023\ntext", "Report 2023\ntext"]) is None
     assert printed_page_offset(["no numbers", "here"]) is None
+
+
+
+def test_list_numbers_docling_invents_before_a_label_are_dropped():
+    # EU AI Act, Article 5: the PDF has "(a) the placing ...", Docling wrote "2. (a) the placing ...".
+    markdown = "1. The following AI practices shall be prohibited:\n2. (a) the placing on the market\n3. (b) the use\n"
+    assert drop_invented_list_numbers(markdown) == (
+        "1. The following AI practices shall be prohibited:\n- (a) the placing on the market\n- (b) the use\n")
+    # A real paragraph number followed by text stays; so does a number before a year in brackets.
+    assert drop_invented_list_numbers("3. ( 57 ) Directive (EU) 2016/943\n") == "- ( 57 ) Directive (EU) 2016/943\n"
+    assert drop_invented_list_numbers("2. Paragraph 1 shall not apply.\n3. (2024) was a year.\n") == (
+        "2. Paragraph 1 shall not apply.\n3. (2024) was a year.\n")
