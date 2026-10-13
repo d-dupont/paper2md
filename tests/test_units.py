@@ -16,7 +16,7 @@ from paper2md.reading_order import Entry, column_order
 from paper2md.row_groups import find_groups
 from paper2md.pages import mark_page_breaks_inside_text, page_name
 from paper2md.superscripts import Run, locate, mark, normalize
-from paper2md.tables import caption_candidates, nearest_caption, table_number
+from paper2md.tables import caption_candidates, column_names, nearest_caption, table_number
 
 
 # --- layout.Box -----------------------------------------------------------------------
@@ -254,3 +254,21 @@ def test_arxiv_ids_and_links_are_recognised(text, arxiv_id):
 
 def test_old_style_ids_become_safe_folder_names():
     assert folder_name("hep-th/9901001") == "hep-th_9901001"
+
+
+def test_multi_row_headers_are_joined_with_a_slash():
+    class Cell:
+        def __init__(self, text, row, header=True):
+            self.text, self.start_row_offset_idx, self.column_header = text, row, header
+
+    # ResNet's Table 9: three header rows; "@[.5, .95]" itself contains dots.
+    train, val = Cell("COCO train", 0), Cell("COCO val", 1)
+    method = Cell("method", 0)  # one cell spanning two header rows: appears twice in the grid
+    grid = [
+        [method, train, train],
+        [method, val, val],
+        [Cell("", 2), Cell("@.5", 2), Cell("@[.5, .95]", 2)],
+        [Cell("ResNet", 3, header=False), Cell("48.4", 3, header=False), Cell("27.2", 3, header=False)],
+    ]
+    assert column_names(grid) == ["method", "COCO train / COCO val / @.5", "COCO train / COCO val / @[.5, .95]"]
+    assert column_names([[Cell("1", 0, header=False)]]) is None

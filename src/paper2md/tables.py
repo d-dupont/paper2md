@@ -93,6 +93,32 @@ def is_title_block(doc: DoclingDocument, table: TableItem) -> bool:
     return False
 
 
+def column_names(grid: list[list]) -> list[str] | None:
+    """Column names from a table's header rows, joined with " / ".
+
+    Docling joins them with "." ("COCO train.COCO val.@[.5, .95]"), which is easily mistaken for
+    a decimal point, repeats a header cell spanning two rows ("Model.Model"), and leaves a stray
+    dot after an empty cell ("method."). `grid` holds each row's cells; a cell spanning several
+    rows or columns appears at each position it covers. Returns None when there's no header row.
+    """
+    rows = 0
+    while rows < len(grid) and any(cell.column_header and cell.start_row_offset_idx == rows for cell in grid[rows]):
+        rows += 1
+    if rows == 0:
+        return None
+    names = []
+    for column in range(len(grid[0])):
+        parts, previous = [], None
+        for row in range(rows):
+            cell = grid[row][column]
+            text = cell.text.strip()
+            if text and cell is not previous and (not parts or parts[-1] != text):
+                parts.append(text)
+            previous = cell
+        names.append(" / ".join(parts))
+    return names
+
+
 def save_tables(doc: DoclingDocument, paper_dir: Path) -> list[tuple[Path, str]]:
     """Save data tables as `paper_dir/tables/table-NN.csv`. Returns (path, caption) pairs.
 
@@ -125,6 +151,9 @@ def save_tables(doc: DoclingDocument, paper_dir: Path) -> list[tuple[Path, str]]
         used_names.add(name)
 
         frame = table.export_to_dataframe(doc=doc)
+        names = column_names(table.data.grid)
+        if names is not None and len(names) == len(frame.columns):
+            frame.columns = names
         # Docling names the columns 0, 1, 2, ... when it found no header row.
         has_header = not isinstance(frame.columns, pd.RangeIndex)
         path = tables_dir / f"{name}.csv"
