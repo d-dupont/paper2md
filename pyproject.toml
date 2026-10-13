@@ -1,6 +1,6 @@
 [project]
 name = "paper2md"
-version = "0.1.0"
+version = "0.2.0"
 description = "Convert academic PDFs into Claude-friendly Markdown, figures and tables"
 readme = "README.md"
 authors = [
