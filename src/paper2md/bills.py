@@ -8,8 +8,8 @@ read each page's text with pdfium, which gives the lines in order with the line 
     17 (1) IN GENERAL.—Not later than 180 days
     18 after the date of the enactment of this Act, the
 
-We drop the line numbers, the page header ("12", "•S 3312 IS") and the stamps ("VerDate ...",
-"... PROD with BILLS"), join accents printed after their letter ("LUJA´N" -> "LUJÁN", see
+We drop the line numbers, the page header ("12", "•S 3312 IS"), the stamps ("VerDate ...",
+"... PROD with BILLS" or "... PROD with $$_JOB") and the end-of-bill ornament, join accents printed after their letter ("LUJA´N" -> "LUJÁN", see
 accents.py), rejoin words broken at line ends, start a new paragraph at each
 section heading and each (a)/(1)/(A) paragraph, and add the usual [p. N] markers (inside a
 paragraph when it runs onto the next page).
@@ -32,8 +32,10 @@ LINE_NUMBER = re.compile(r"^(\d{1,2}) (?=\S)")
 SOFT_BREAK = "￾"
 STAMPS = (
     re.compile(r"^VerDate\b"),                       # "VerDate Sep 11 2014 01:21 Nov 22, 2023 Jkt ..."
-    re.compile(r"PROD with [A-Z]+$"),              # "dmwilson on DSKJM0X7X2PROD with BILLS"
+    re.compile(r"PROD with \S+$"),                 # "dmwilson on DSKJM0X7X2PROD with BILLS",
+                                                     # "kjohnson on DSK7ZCZBW3PROD with $$_JOB"
     re.compile(r"^•\s*[A-Z][A-Z. ]*\d+\s+[A-Z]{2,4}$"),  # "•S 3312 IS", "•HR 815 EH"
+    re.compile(r"^Æ$"),                              # the end-of-bill ornament, read as "Æ"
 )
 PAGE_HEADER = re.compile(r"^(?:\d+|[IVX]{1,4})$")    # the page number, or the cover's "II"
 HEADING = re.compile(r"^(?:SEC(?:TION)?\.? \d|TITLE [IVXLC]+\b|Subtitle [A-Z]\b|DIVISION [A-Z]\b)")

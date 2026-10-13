@@ -357,6 +357,27 @@ def test_bill_page_lines_drop_numbers_header_and_stamps():
     assert page_lines("1 Mr. WICKER, Mr. LUJA´N, and \r\n")[0].text == "Mr. WICKER, Mr. LUJÁN, and"
 
 
+# The last page of H.R. 10243 (118th Congress), verbatim: the end-of-bill ornament comes out
+# as "Æ", and this printing job signs its stamp "PROD with $$_JOB" instead of "... BILLS".
+BILL_LAST_PAGE = (
+    "3 \r\n•HR 10243 IH\r\n"
+    "1 ‘‘(D) TERRITORY DEFINED.—In this para\ufffe2 graph, the term ‘territory’ means American \r\n"
+    "3 Samoa, Guam, the Commonwealth of Puerto \r\n"
+    "4 Rico, the Northern Mariana Islands, or the \r\n"
+    "5 United States Virgin Islands.’’. \r\n"
+    "Æ \r\n"
+    "VerDate Sep 11 2014 01:10 Dec 28, 2024 Jkt 059200 PO 00000 Frm 00003 Fmt 6652 Sfmt 6301 "
+    "E:\\BILLS\\H10243.IH H10243\r\n"
+    "kjohnson on DSK7ZCZBW3PROD with $$_JOB"
+)
+
+
+def test_bill_end_mark_and_every_stamp_form_are_dropped():
+    lines = [line.text for line in page_lines(BILL_LAST_PAGE)]
+    assert lines[-1] == "United States Virgin Islands.’’."  # the bill's last words end the page
+    assert not any("Æ" in line or "PROD with" in line or "VerDate" in line for line in lines)
+
+
 def test_bill_paragraphs_hyphens_and_page_markers():
     pages = [page_lines(BILL_PAGE_1), page_lines(BILL_PAGE_2)]
     text = bill_markdown(bill_blocks(pages, {1: "11", 2: "12"}))

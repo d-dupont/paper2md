@@ -183,7 +183,7 @@ def bill(tmp_path_factory):
 def test_bill_text_has_no_line_numbers_headers_or_stamps(bill):
     for garbled in ("non8", "Account5", "18019", "Representa1", "mathe14"):
         assert garbled not in bill
-    for stamp in ("VerDate", "PROD with BILLS", "•S 3312"):
+    for stamp in ("VerDate", "PROD with", "•S 3312", "Æ"):  # Æ: the end-of-bill ornament
         assert stamp not in bill
     # Quotes copied from the PDF, verified by eye against the printed pages:
     assert "during the most recent 180-day period, did not employ more than 500 employees;" in bill
