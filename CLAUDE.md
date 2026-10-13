@@ -27,12 +27,14 @@ Tests:
 
 ```bash
 uv run pytest                    # everything (~2 min: converts 4 sample papers, one with equations)
-uv run pytest -m "not slow"      # unit tests only (<1 s), for quick checks while editing
+uv run pytest -m "not slow"      # unit tests only (~5 s, mostly importing Docling), for quick checks while editing
 uv run pytest -k page_marker     # tests whose name contains "page_marker"
 uv run pytest tests/test_units.py::test_ambiguous_run_is_left_alone   # one test
 ```
 
 `tests/test_units.py` checks single functions on hand-made inputs. `tests/test_papers.py` (marked `slow`) runs the real command on sample papers and checks what was verified by hand: figure/caption links, table CSVs, superscripts, page markers, equations. `conftest.py` downloads missing samples from arXiv (the PDFs aren't committed) and converts each paper only once per test run. When fixing a bug, add a test that fails without the fix.
+
+GitHub Actions (`.github/workflows/tests.yml`) runs the unit tests on every push, on Linux and Windows; the slow tests stay local. Releases: bump `version` in `pyproject.toml`, push, wait for the ✓, then `git tag -a vX.Y.Z -m ...`, `git push origin vX.Y.Z`, `gh release create vX.Y.Z`. The user works from two computers (this Mac and a Windows PC), both pushing to `main`: `git pull` before starting.
 
 ## Everyday use (outside this project)
 
@@ -71,7 +73,7 @@ Commit once at the end of each step.
 - [x] Step 5: `--formulas` flag → `do_formula_enrichment=True`. 5/6 Attention equations exact. The CodeFormulaV2 model can't use the Mac GPU (Docling drops MPS for it, and it has no MLX export), so it runs on CPU (~20 s per equation with 8 threads). Off by default since equations are saved as images (`--formulas` adds LaTeX text)
 - [x] Step 5b: `superscripts.py`: sub/superscripts restored in text and tables (Attention: 122 marked, 2 skipped)
 - [x] Page markers `[p. N]` for citing (`pages.py`)
-- [x] Step 6: pytest suite: 13 unit tests + 12 end-to-end tests on 4 sample papers
+- [x] Step 6: pytest suite (now 41 unit tests + 18 end-to-end tests)
 - [x] Leftovers: accents, footnote pages, row-group labels, two-column page order, panel titles + split captions
 - Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode, cache converted papers, `escape_html=False` (`<` is written as `&lt;`)
 
