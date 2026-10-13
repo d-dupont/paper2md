@@ -239,6 +239,10 @@ def _join(left: str, right: str, hyphenated: set[str]) -> str:
         return left + ("-" if keep else "") + right
     if len(left) > 1 and left.endswith("-") and left[-2].isalnum():
         return left + right  # "180-" + "day"
+    # The GPO sets em dashes without spaces ("IN GENERAL.—The"), and a line can break right after
+    # one, or after a slash ("HIV/" / "AIDS"): no space was printed there either.
+    if left.endswith(("—", "/")):
+        return left + right
     return left + " " + right
 
 

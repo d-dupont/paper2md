@@ -427,6 +427,15 @@ def test_a_year_in_brackets_starting_a_line_is_not_a_paragraph_label():
     assert "\n\n(1) is individual." in text  # a real label still starts a paragraph
 
 
+def test_no_space_is_added_after_a_dash_or_slash_ending_a_line():
+    # H.R. 10520 and H. Res. 99 (118th Congress): the GPO prints neither with a space after it.
+    pages = [page_lines("18 ‘‘(2) COORDINATION WITH STAKEHOLDERS.— \r\n19 The education and outreach program \r\n"
+                        "20 (10) supports appropriate funding for HIV/ \r\n21 AIDS prevention, care, treatment \r\n")]
+    text = bill_markdown(bill_blocks(pages, {1: "4"}))
+    assert "‘‘(2) COORDINATION WITH STAKEHOLDERS.—The education and outreach program" in text
+    assert "supports appropriate funding for HIV/AIDS prevention, care, treatment" in text
+
+
 def test_text_after_a_blank_page_does_not_join_the_paragraph_before_it():
     # S. Con. Res. 7 (reported): page 11 is blank, page 12 is the back cover.
     pages = [page_lines("1 (5) calls on the President to work for \r\n2 a free Russia. \r\n"),
