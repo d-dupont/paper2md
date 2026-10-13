@@ -1,17 +1,19 @@
 ---
 name: read-paper
-description: Read, summarize or analyze an academic paper that the user points to as a PDF file, an arXiv ID (e.g. 2307.09288) or an arXiv link. Converts it with the user's local paper2md tool into Markdown with page markers, figure and equation images and table CSVs, then works from that. Use whenever the user asks about a specific research paper by file, arXiv ID or arXiv URL.
+description: Read, summarize or analyze an academic paper or a U.S. congressional bill that the user points to as a PDF file, an arXiv ID (e.g. 2307.09288), an arXiv link, or a link to a bill's PDF (e.g. GovInfo or congress.gov). Converts it with the user's local paper2md tool into Markdown with page markers (papers also get figure and equation images and table CSVs), then works from that. Use whenever the user asks about a specific research paper by file, arXiv ID or arXiv URL, or a specific bill by PDF, link or number (e.g. S. 3312, H.R. 815).
 ---
 
-# Reading a paper with paper2md
+# Reading a paper or bill with paper2md
 
 paper2md is the user's own tool (project: `/Users/da/Desktop/Claude code first project python PDF tool`).
-It turns a paper into text that is cheaper and more precise to work with than the PDF itself.
+It turns a paper or a congressional bill into text that is cheaper and more precise to work with
+than the PDF itself.
 
 ## 1. Find or make the conversion
 
-Converted papers live in `~/papers/<id>/`, where `<id>` is the arXiv ID (old-style IDs with a slash
-use an underscore: `hep-th/9901001` → `hep-th_9901001`) or the PDF's file name without `.pdf`.
+Converted documents live in `~/papers/<id>/`, where `<id>` is the arXiv ID (old-style IDs with a
+slash use an underscore: `hep-th/9901001` → `hep-th_9901001`) or the PDF's file name without `.pdf`
+(for bills from GovInfo, e.g. `BILLS-118s3312is`).
 
 - If `~/papers/<id>/paper.md` exists, use it; don't convert again unless the user asks.
 - Otherwise convert. Use the full command: the `paper2md` alias only exists in interactive shells.
@@ -20,20 +22,31 @@ use an underscore: `hep-th/9901001` → `hep-th_9901001`) or the PDF's file name
   uv run --project "/Users/da/Desktop/Claude code first project python PDF tool" paper2md "<PDF path, arXiv ID or arXiv link>" --out ~/papers
   ```
 
-  It takes about 10–70 seconds and ends with a summary (`Done in …`, counts of figures, equations,
-  tables, page markers). arXiv papers are downloaded to `~/papers/<id>/<id>.pdf` first.
+  A paper takes about 10–70 seconds and ends with a summary (`Done in …`, counts of figures,
+  equations, tables, page markers). arXiv papers are downloaded to `~/papers/<id>/<id>.pdf` first.
   If it fails, show the user the error message rather than guessing.
+
+- **Bills** are recognized automatically from their margin line numbers and convert in about a
+  second. The tool only reads local PDFs, so a bill given as a link has to be downloaded first:
+  save it as `~/papers/<name>/<name>.pdf`, then convert that file. Given only a bill number, GovInfo
+  serves `https://www.govinfo.gov/content/pkg/BILLS-<congress><type><number><version>/pdf/` +
+  the same name + `.pdf`, e.g. `BILLS-118s3312is` (118th Congress, S. 3312, introduced in the
+  Senate). Common versions: `ih`/`is` introduced, `rh`/`rs` reported, `eh`/`es` passed one
+  chamber, `enr` passed both. Different versions have different text, so tell the user which
+  version you fetched. If the download isn't a PDF, that version doesn't exist.
 
 ## 2. Read `paper.md`
 
-Read only what the question needs: for long papers, read in parts and start with the relevant
-sections. Don't paste large parts of the paper into replies.
+Read only what the question needs: for long documents, read in parts and start with the relevant
+sections. Don't paste large parts of the document into replies.
 
 What the format means:
 
 - **The block at the top** (between `---` lines) gives the title, authors and publication date
   (exact for arXiv papers; other PDFs have only the detected title), the source, the page count,
   and how the file was made. Use it for citations, e.g. "He et al. (2015), arXiv:1512.03385, p. 6".
+  For a bill it gives the short title and the bill number instead, e.g.
+  `bill: "S. 3312, 118th Congress"`; sponsors are in the text on page 1.
 - **`[p. N]`** marks where page N starts (the PDF's printed page number if it has one). Cite pages for
   claims, e.g. "(p. 7)". A marker inside a paragraph means the paragraph continues on that page.
   When the printed number differs from the page's position in the PDF, both are given:
@@ -50,6 +63,17 @@ What the format means:
 - **Sub- and superscripts** are written `10^{-9}`, `d_{model}`, `β_{1}`; `^{∗}`/`^{†}` after
   author names or words are footnote markers.
 
+### Bills
+
+A bill has no figures, tables or equations. Titles and sections are `##` headings
+(`## TITLE I—…`, `## SEC. 201. DEFINITIONS.`), and every `(a)`, `(1)`, `(A)`, `(i)` starts its own
+paragraph. Those paragraphs are all at the same level: the nesting is not shown, so work it out
+from the labels before citing. Federal bills nest section → `(a)` subsection → `(1)` paragraph →
+`(A)` subparagraph → `(i)` clause → `(I)` subclause, so "(A)" after "(2)" under SEC. 201 is
+"sec. 201(2)(A)". `(i)` is ambiguous: after `(h)` it is a subsection, under an `(A)` it is a
+clause. Cite bills by section and page, e.g. "S. 3312, sec. 201(2)(A), p. 11". Bills often
+repeat a definition word for word in several titles, so find the section before quoting it.
+
 ## 3. Known weak spots
 
 - Small fractions or sums written inside a sentence come out garbled: `1 √_{dk}` is 1/√d_k and
@@ -59,6 +83,11 @@ What the format means:
   reference.
 - A few tables can be untitled or missing (e.g. example boxes read as normal text); their content
   is still in `paper.md`.
+- **Bills:** the margin line numbers are removed, so a "page 12, line 4" reference (common in
+  amendments) can't be found in `paper.md`; check the PDF. A hyphen at a line end is kept only if
+  the hyphenated word appears unbroken elsewhere in the bill, so a rare compound can lose its
+  hyphen (`non-`/`government` → `nongovernment`). Accented names on the cover can come out split
+  (`LUJA´N` for Luján).
 
 If something looks wrong in the conversion (missing section, figure with the wrong caption),
 tell the user: it's how the tool gets improved.
