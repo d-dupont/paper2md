@@ -107,6 +107,12 @@ def test_underscores_are_not_escaped(convert):
     assert "\\_" not in markdown(convert(ATTENTION))
 
 
+def test_less_than_and_ampersand_are_written_plainly(convert):
+    text = markdown(convert(RESNET))
+    assert "(<90% error)" in text
+    assert "&lt;" not in text and "&amp;" not in text
+
+
 # --- page markers -----------------------------------------------------------------------
 
 @pytest.mark.parametrize("paper, pages", [(RESNET, 12), (SAFETY, 29)])

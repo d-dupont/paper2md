@@ -51,8 +51,11 @@ def convert_pdf(pdf: Path, ocr: bool = False, formulas: bool = False) -> Docling
 def write_markdown(doc: DoclingDocument, paper_dir: Path) -> Path:
     """Write `paper_dir/paper.md`, linking figures to the files that figures.py saved."""
     path = paper_dir / "paper.md"
-    # Don't escape "_" as "\\_": subscripts are written as x_{1}, and Claude reads plain text.
-    markdown = doc.export_to_markdown(image_mode=ImageRefMode.REFERENCED, escape_underscores=False)
+    # Write text as it is, for Claude rather than for a Markdown viewer: no "\\_" (subscripts
+    # are written x_{1}) and no "&lt;" / "&amp;" ("|∆| < α", "Hinton & Salakhutdinov").
+    markdown = doc.export_to_markdown(
+        image_mode=ImageRefMode.REFERENCED, escape_underscores=False, escape_html=False
+    )
     path.write_text(markdown, encoding="utf-8")
     return path
 

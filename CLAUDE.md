@@ -54,7 +54,7 @@ GitHub Actions (`.github/workflows/tests.yml`) runs the unit tests on every push
 - Equations: `pipeline.convert_with_estimate` does a quick pass without the formula model to count equations, prints a time estimate, then reconverts with it. The formula model (CodeFormulaV2) is CPU-only on Macs; `convert.performance_cores()` sets Docling's threads to the performance-core count (8 threads: 77 s vs Docling's default 4: 133 s; adding efficiency cores didn't help). Docling swallows `KeyboardInterrupt` during the formula step, so `cli.stop_now` handles Ctrl+C with `os._exit(130)`; nothing is written before conversion finishes.
 - `accents.py` joins spacing accents that LaTeX PDFs store before their letter (`M¨uller` → `Müller`, `Garc´ıa` → `García`, `˜B` → `B̃`); a backtick counts as a grave accent only between two letters, so code fences stay intact.
 - `equations.py` crops every display equation from the pdfium render into `equations/equation-NN.png` (reading order) and links it in place. By default (no `--formulas`) the link replaces Docling's `<!-- formula-not-decoded -->`; with `--formulas` it follows the LaTeX so Claude can check it (the model garbled Attention's learning-rate equation; the image is perfectly readable). Runs after the page markers because it replaces items with location-less links.
-- `write_markdown` passes `escape_underscores=False` so `x_{1}` isn't written as `x\_{1}`.
+- `write_markdown` passes `escape_underscores=False` (so `x_{1}` isn't written `x\_{1}`) and `escape_html=False` (so `<` and `&` aren't written `&lt;` and `&amp;`): the output is for Claude, not a Markdown viewer.
 - `row_groups.py` spreads a first-column group label ("(A)" in Attention's Table 3) over all rows between two horizontal lines, which it reads from the PDF with pdfium because Docling records neither the span nor the lines. Only the first column (blanks elsewhere can mean "same as baseline"), only one-line labels (taller cells are usually row labels Docling merged, as in ResNet's Table 13).
 - `layout.py` holds what both share: `Box` (page rectangles in points, top-left origin), `box_of`, and `attach_caption`.
 - Figure images are cropped from our own pypdfium2 render, not Docling's page images: Docling's default `docling-parse` backend renders some vector charts mostly blank (Scaling Laws, Figure 2). Don't switch Docling's backend to pypdfium2 to fix this: its text extraction adds spaces before punctuation (`[1 ,`).
@@ -75,7 +75,7 @@ Commit once at the end of each step.
 - [x] Page markers `[p. N]` for citing (`pages.py`)
 - [x] Step 6: pytest suite (now 41 unit tests + 18 end-to-end tests)
 - [x] Leftovers: accents, footnote pages, row-group labels, two-column page order, panel titles + split captions
-- Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode, cache converted papers, `escape_html=False` (`<` is written as `&lt;`)
+- Later, optional: pymupdf4llm baseline for comparison, token-count report, `manifest.json`, batch mode, cache converted papers
 
 ## Known limitations
 
