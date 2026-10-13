@@ -8,6 +8,7 @@ from docling_core.types.doc.labels import DocItemLabel
 
 from paper2md.accents import join_accents
 from paper2md.arxiv import folder_name, parse_arxiv_id
+from paper2md.bills import bill_blocks, bill_markdown, bill_number, bill_title, is_line_numbered, page_lines
 from paper2md.cli import build_parser, run
 from paper2md.convert import performance_cores
 from paper2md.figures import find_caption
@@ -303,3 +304,62 @@ def test_arxiv_id_is_recognised_from_the_saved_file_name():
     assert arxiv_id_for(Path("~/papers/1512.03385/1512.03385.pdf")) == "1512.03385"
     assert arxiv_id_for(Path("hep-th_9901001.pdf")) == "hep-th/9901001"
     assert arxiv_id_for(Path("safety paper.pdf")) is None
+
+
+# --- bills: line-numbered pages ----------------------------------------------------------------
+
+# Two pages as pdfium returns them (abridged from S. 3312): page number and bill ID on top,
+# line numbers first on each line, U+FFFE where a word breaks at a line end (pdfium leaves out
+# the line break after it), printing-office stamps at the bottom.
+BILL_PAGE_1 = (
+    "11 \r\n•S 3312 IS\r\n"
+    "1 (5) CRITICAL-IMPACT AI ORGANIZATION.—The \r\n"
+    "2 term ‘‘critical-impact AI organization’’ means a non\ufffe3 government organization that serves as the deployer \r\n"
+    "4 of a critical-impact artificial intelligence system. \r\n"
+    "5 (6) HIGH-IMPACT SYSTEM.—The term ‘‘high\ufffe6 impact system’’ means a system \r\n"
+    "7 used during the most recent 180- \r\n"
+    "8 day period by a high-impact \r\n"
+    "VerDate Sep 11 2014 01:21 Nov 22, 2023 Jkt 049200 PO 00000 Frm 00011 Fmt 6652 Sfmt 6201 E:\\BILLS\\S3312.IS S3312\r\n"
+    "dmwilson on DSKJM0X7X2PROD with BILLS"
+)
+BILL_PAGE_2 = (
+    "12 \r\n•S 3312 IS\r\n"
+    "1 developer that has 500 employees. \r\n"
+    "2 SEC. 202. GENERATIVE ARTIFICIAL INTELLIGENCE \r\n"
+    "3 TRANSPARENCY. \r\n"
+    "4 (a) IN GENERAL.—Each developer shall report. \r\n"
+)
+
+
+def test_bill_page_lines_drop_numbers_header_and_stamps():
+    lines = page_lines(BILL_PAGE_1)
+    assert all(line.numbered for line in lines)
+    assert lines[0].text == "(5) CRITICAL-IMPACT AI ORGANIZATION.—The"
+    assert lines[2].text == "government organization that serves as the deployer"  # its "3" removed
+    assert not any("VerDate" in line.text or "PROD with" in line.text for line in lines)
+    # A line starting with a number keeps it: only the line number goes.
+    assert page_lines("1 500 employees; \r\n2 and")[0].text == "500 employees;"
+
+
+def test_bill_paragraphs_hyphens_and_page_markers():
+    pages = [page_lines(BILL_PAGE_1), page_lines(BILL_PAGE_2)]
+    text = bill_markdown(bill_blocks(pages, {1: "11", 2: "12"}))
+    assert text.startswith("[p. 11]\n\n(5) CRITICAL-IMPACT AI ORGANIZATION.—The term")
+    assert "means a nongovernment organization" in text   # break hyphen dropped
+    assert "‘‘high-impact system’’" in text              # kept: "high-impact" occurs unbroken too
+    assert "the most recent 180-day period" in text      # a real hyphen at a line end
+    assert "\n\n(6) HIGH-IMPACT SYSTEM" in text          # each (a)/(1) starts a paragraph
+    # The paragraph runs onto page 12, so the marker goes inside it; the heading on two
+    # lines becomes one; (a) starts a new paragraph after it.
+    assert "by a high-impact [p. 12] developer that has 500 employees." in text
+    assert "\n\n## SEC. 202. GENERATIVE ARTIFICIAL INTELLIGENCE TRANSPARENCY.\n\n(a) IN GENERAL." in text
+
+
+def test_bill_detection_title_and_number():
+    pages = [page_lines(BILL_PAGE_1), page_lines(BILL_PAGE_2)]
+    assert is_line_numbered(pages[:1])
+    assert not is_line_numbered([page_lines("Abstract\nWe study 3 models.\n1 Introduction\nText.")])
+    cover = page_lines("II \r\n118TH CONGRESS \r\n1ST SESSION S. 3312 \r\n"
+                       "4 This Act may be cited as the ‘‘Frontier \r\n5 AI Act of 2023’’. \r\n")
+    assert bill_number([cover]) == "S. 3312, 118th Congress"
+    assert bill_title(bill_blocks([cover], {1: "1"})) == "Frontier AI Act of 2023"

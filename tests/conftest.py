@@ -27,6 +27,22 @@ def sample(arxiv_id: str) -> Path:
     return path
 
 
+BILL = "BILLS-118s3312is"  # S. 3312 (118th Congress), a line-numbered bill from GovInfo
+
+
+def bill_sample() -> Path:
+    """samples/BILLS-118s3312is.pdf, downloaded from GovInfo the first time (skipped offline)."""
+    path = SAMPLES / f"{BILL}.pdf"
+    if not path.exists():
+        SAMPLES.mkdir(exist_ok=True)
+        try:
+            urllib.request.urlretrieve(f"https://www.govinfo.gov/content/pkg/{BILL}/pdf/{BILL}.pdf", path)
+        except OSError as error:
+            path.unlink(missing_ok=True)
+            pytest.skip(f"could not download the sample bill: {error}")
+    return path
+
+
 @pytest.fixture(scope="session")
 def convert(tmp_path_factory):
     """convert("1512.03385") runs paper2md once per test run and returns the paper's output folder.

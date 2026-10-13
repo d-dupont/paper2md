@@ -89,7 +89,19 @@ uv run paper2md 2307.09288 --out ~/papers    # arXiv ID or link: downloads the P
 uv run paper2md paper.pdf --formulas         # also convert equations to LaTeX (slow)
 uv run paper2md scan.pdf --ocr               # scanned PDFs without a text layer
 uv run paper2md paper.pdf --verbose          # show the libraries' progress and details
+uv run paper2md bill.pdf                     # congressional bills are detected automatically
+uv run paper2md doc.pdf --bill / --no-bill   # force or switch off bill mode
 ```
+
+**Bills.** Congressional bills printed by the GPO have line numbers (1–25) in the margin, which
+a layout model mixes into the words (`non8 government`). When most pages carry such numbers,
+paper2md reads the text directly from the PDF instead: it drops the line numbers, page headers
+and printing-office stamps, rejoins words broken at line ends, gives each `SEC.` heading and
+each `(a)`/`(1)`/`(A)` paragraph its own paragraph, and keeps the `[p. N]` markers. The
+information block names the bill (`S. 3312, 118th Congress`) and its short title. One thing
+can't be read off the page: whether a hyphen at a line end belongs to the word. It is kept when
+the hyphenated word appears unbroken elsewhere in the bill (`high-impact`), and dropped
+otherwise (`non-`/`government` → `nongovernment`).
 
 Before a `--formulas` run the tool prints how many equations it found and how long they will take;
 Ctrl+C stops it.

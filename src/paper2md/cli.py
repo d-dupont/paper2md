@@ -48,6 +48,13 @@ def build_parser() -> argparse.ArgumentParser:
         "without it, equations are saved as images",
     )
     parser.add_argument(
+        "--bill",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="treat the PDF as a line-numbered bill (default: detected automatically); "
+        "--no-bill forces the normal conversion",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="show the libraries' progress bars and notes, and more detail at the end",
@@ -101,6 +108,16 @@ def run(argv: list[str] | None = None) -> None:
                 parser.error(f"could not download arXiv {arxiv_id}: {error}")
     if pdf.suffix.lower() != ".pdf":
         parser.error(f"not a .pdf file: {pdf}")
+
+    # Congressional bills: margin line numbers on most pages. Read them without Docling.
+    from paper2md.bills import is_line_numbered, process_bill, read_pages
+
+    if args.bill is not False:
+        pages = read_pages(pdf)
+        if args.bill or is_line_numbered(pages):
+            print(f"Converting {pdf} (line-numbered bill) ...")
+            process_bill(pdf, args.out / pdf.stem, pages)
+            return
 
     if not args.verbose:
         silence_libraries()

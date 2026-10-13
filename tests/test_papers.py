@@ -9,6 +9,7 @@ import pytest
 from PIL import Image
 
 from paper2md.arxiv import download, pdf_path
+from paper2md.cli import run
 
 pytestmark = pytest.mark.slow
 
@@ -166,3 +167,44 @@ def test_arxiv_paper_is_downloaded_next_to_its_conversion(tmp_path):
         pytest.skip(f"no connection to arXiv: {error}")
     assert path == pdf_path("1706.03762", tmp_path) == tmp_path / "1706.03762" / "1706.03762.pdf"
     assert path.read_bytes()[:4] == b"%PDF"
+
+
+# --- line-numbered bills ------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def bill(tmp_path_factory):
+    from conftest import BILL, bill_sample
+
+    out = tmp_path_factory.mktemp("bill")
+    run([str(bill_sample()), "--out", str(out)])
+    return (out / BILL / "paper.md").read_text(encoding="utf-8")
+
+
+def test_bill_text_has_no_line_numbers_headers_or_stamps(bill):
+    for garbled in ("non8", "Account5", "18019", "Representa1", "mathe14"):
+        assert garbled not in bill
+    for stamp in ("VerDate", "PROD with BILLS", "•S 3312"):
+        assert stamp not in bill
+    # Quotes copied from the PDF, verified by eye against the printed pages:
+    assert "during the most recent 180-day period, did not employ more than 500 employees;" in bill
+    assert "a social network site, video sharing service, search engine, and content aggregation service." in bill
+    assert "Artificial Intelligence Research, Innovation, and Accountability Act of 2023" in bill
+    assert "high-impact artificial intelligence systems" in bill  # hyphen kept: it's part of the word
+    assert "House of Representatives of the United States" in bill  # hyphen dropped: a line break
+
+
+def test_bill_sections_paragraphs_and_pages(bill):
+    assert "\n## SEC. 201. DEFINITIONS.\n" in bill
+    assert "\n## TITLE I—ARTIFICIAL INTELLIGENCE RESEARCH AND INNOVATION\n" in bill
+    assert "\n(4) COVERED INTERNET PLATFORM.—\n" in bill
+    assert re.findall(r"\[p\. (\d+)\]", bill) == [str(n) for n in range(1, 59)]
+    assert 'title: "Artificial Intelligence Research, Innovation, and Accountability Act of 2023"' in bill
+    assert 'bill: "S. 3312, 118th Congress"' in bill
+
+
+@pytest.mark.parametrize("paper", [RESNET, SAFETY, "1706.03762", "2001.08361", "1412.6980"])
+def test_papers_are_not_mistaken_for_bills(paper):
+    from conftest import sample
+    from paper2md.bills import is_line_numbered, read_pages
+
+    assert not is_line_numbered(read_pages(sample(paper)))
